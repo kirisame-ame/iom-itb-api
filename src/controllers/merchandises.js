@@ -9,16 +9,16 @@ const DeleteMerchandise = require('../services/merchandises/deleteMerchandises')
 
 const GetMerchandiseById = async (req, res) => {
   try {
-    const { id } = req.params; // Mendapatkan id dari parameter URL
-    const merchandise = await GetMerchandise({id}); // Mengambil detail merchandise berdasarkan ID
+    const id = Number(req.params.id);
 
-    // Jika merchandise tidak ditemukan, kembalikan respon 404
-    if (!merchandise) {
-      return res.status(StatusCodes.NOT_FOUND).json(new BaseResponse({
-        status: StatusCodes.NOT_FOUND,
-        message: 'Merchandise tidak ditemukan',
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(StatusCodes.BAD_REQUEST).json(new BaseResponse({
+        status: StatusCodes.BAD_REQUEST,
+        message: 'Parameter id merchandise tidak valid',
       }));
     }
+
+    const merchandise = await GetMerchandise({id}); // Mengambil detail merchandise berdasarkan ID
 
     // Kembalikan data merchandise jika ditemukan
     res.status(StatusCodes.OK).json(new BaseResponse({

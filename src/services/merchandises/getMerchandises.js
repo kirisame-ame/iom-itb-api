@@ -1,20 +1,20 @@
+const { StatusCodes } = require('http-status-codes');
 const { Merchandises } = require('../../models');
 const { Op } = require('sequelize');
 
 // Tambahkan parameter id untuk pengecekan spesifik merchandise
 const GetMerchandises = async ({ id = null, search = '', page = 1, limit = 5 }) => {
   // Jika id disediakan, kembalikan merchandise berdasarkan id
-  if (id) {
-    try {
-      const merchandise = await Merchandises.findByPk(id);
-      if (!merchandise) {
-        return { message: `Merchandise dengan id ${id} tidak ditemukan` };
-      }
-      return merchandise;
-    } catch (error) {
-      return { message: `Terjadi kesalahan: ${error.message}` };
+  if (id !== null && id !== undefined) {
+    const merchandise = await Merchandises.findByPk(id);
+
+    if (!merchandise) {
+      const error = new Error('Merchandise tidak ditemukan');
+      error.status = StatusCodes.NOT_FOUND;
+      throw error;
     }
-    
+
+    return merchandise;
   }  
 
   // Logika untuk pencarian semua merchandise
