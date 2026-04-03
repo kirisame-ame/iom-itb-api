@@ -22,7 +22,7 @@ module.exports = {
         allowNull: false
       },
       proof: {
-        type: Sequelize.STIRING, // Untuk menyimpan file bukti dalam bentuk binary
+        type: Sequelize.STRING,
         allowNull: true
       },
       notification: {

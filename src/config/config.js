@@ -1,39 +1,48 @@
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
-// Debug environment variables
-console.log('=== Database Config Debug ===');
-console.log('DB_USERNAME:', process.env.DB_USERNAME);
-console.log('DB_PASSWORD:', process.env.DB_PASSWORD ? '***' : 'undefined');
-console.log('DB_DATABASE:', process.env.DB_DATABASE);
-console.log('DB_HOST:', process.env.DB_HOST);
-console.log('DB_PORT:', process.env.DB_PORT);
-console.log('NODE_ENV:', process.env.NODE_ENV);
+const buildConfig = () => {
+  const useSsl = (process.env.DB_SSL || '').toLowerCase() !== 'false';
+  const baseConfig = {
+    dialect: 'postgres',
+    logging: false,
+  };
 
-module.exports = {
-  development: {
-    username: process.env.DB_USERNAME,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_DATABASE,
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    dialect: 'mysql',
-  },
-  test: {
-    username: process.env.DB_USERNAME,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_DATABASE,
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    dialect: 'mysql',
-  },
-  production: {
-    username: process.env.DB_USERNAME,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_DATABASE,
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    dialect: 'mysql',
-  },
+  if (process.env.DATABASE_URL) {
+    return {
+      ...baseConfig,
+      use_env_variable: 'DATABASE_URL',
+      dialectOptions: useSsl
+        ? {
+            ssl: {
+              require: true,
+              rejectUnauthorized: false,
+            },
+          }
+        : {},
+    };
+  }
+
+  return {
+    ...baseConfig,
+    username: process.env.DB_USERNAME || 'postgres',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_DATABASE || 'postgres',
+    host: process.env.DB_HOST || '127.0.0.1',
+    port: Number(process.env.DB_PORT || 5432),
+    dialectOptions: useSsl
+      ? {
+          ssl: {
+            require: true,
+            rejectUnauthorized: false,
+          },
+        }
+      : {},
+  };
 };
 
+module.exports = {
+  development: buildConfig(),
+  test: buildConfig(),
+  production: buildConfig(),
+};

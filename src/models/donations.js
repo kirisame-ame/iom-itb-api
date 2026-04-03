@@ -44,7 +44,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     proof: {
-      type: DataTypes.BLOB('medium'),
+      type: DataTypes.STRING,
       allowNull: true
     },
     notification: {
