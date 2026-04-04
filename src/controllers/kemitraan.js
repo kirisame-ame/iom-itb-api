@@ -2,6 +2,8 @@ const { StatusCodes } = require('http-status-codes');
 const BaseResponse = require('../schemas/responses/BaseResponse');
 const createKemitraanService = require('../services/kemitraan/createKemitraan');
 const getKemitraanService = require('../services/kemitraan/getKemitraan');
+const updateKemitraanService = require('../services/kemitraan/updateKemitraan');
+const deleteKemitraanService = require('../services/kemitraan/deleteKemitraan');
 
 const createKemitraan = async (req, res, next) => {
   try {
@@ -13,8 +15,8 @@ const createKemitraan = async (req, res, next) => {
         data: result,
       })
     );
-  } catch (error) {
-    next(error);
+  } catch (error) { 
+    next(error); 
   }
 };
 
@@ -28,6 +30,36 @@ const getKemitraan = async (req, res, next) => {
         data: result,
       })
     );
+  } catch (error) { 
+    next(error); 
+  }
+};
+
+const updateKemitraan = async (req, res, next) => {
+  try {
+    const result = await updateKemitraanService(req.params.id, req.body);
+    return res.status(StatusCodes.OK).json(
+      new BaseResponse({
+        status: StatusCodes.OK,
+        message: 'Successfully updated Kemitraan',
+        data: result,
+      })
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteKemitraan = async (req, res, next) => {
+  try {
+    await deleteKemitraanService(req.params.id);
+    return res.status(StatusCodes.OK).json(
+      new BaseResponse({
+        status: StatusCodes.OK,
+        message: 'Successfully deleted Kemitraan',
+        data: null,
+      })
+    );
   } catch (error) {
     next(error);
   }
@@ -36,4 +68,6 @@ const getKemitraan = async (req, res, next) => {
 module.exports = {
   createKemitraan,
   getKemitraan,
+  updateKemitraan,
+  deleteKemitraan,
 };
