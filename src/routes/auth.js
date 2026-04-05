@@ -1,12 +1,14 @@
 const { Router } = require('express');
 const {
-  LoginAdmin,
-  GetDataAdmin
-} = require('../controllers/admins');
+  getMe,
+  getApps,
+  selectApp,
+} = require('../controllers/ssoAuth');
 const router = Router();
-const JWTValidation = require('../middlewares/auth')
+const JWTValidation = require('../middlewares/auth');
 
-router.post('/login', [], LoginAdmin);
-router.get('/me', JWTValidation, GetDataAdmin);
+router.get('/me', JWTValidation, getMe);
+router.get('/apps', JWTValidation, getApps);
+router.post('/select', JWTValidation, selectApp);
 
 module.exports = router;
