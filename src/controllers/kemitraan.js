@@ -22,14 +22,14 @@ const createKemitraan = async (req, res, next) => {
 
 const getKemitraan = async (req, res, next) => {
   try {
-    const result = await getKemitraanService();
-    return res.status(StatusCodes.OK).json(
-      new BaseResponse({
-        status: StatusCodes.OK,
-        message: 'Successfully fetched Kemitraan',
-        data: result,
-      })
-    );
+    const result = await getKemitraanService(req.query);
+    
+    return res.status(StatusCodes.OK).json({
+      status: StatusCodes.OK,
+      message: 'Successfully fetched Kemitraan',
+      data: result.data,
+      pagination: result.pagination,
+    });
   } catch (error) { 
     next(error); 
   }

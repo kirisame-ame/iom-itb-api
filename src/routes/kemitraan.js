@@ -10,7 +10,7 @@ const auth = require('../middlewares/auth');
 const router = Router();
 
 router.get('', [], getKemitraan);
-router.post('', [auth], createKemitraan);
+router.post('', [], createKemitraan);
 router.put('/:id', [auth], updateKemitraan);
 router.delete('/:id', [auth], deleteKemitraan);
 

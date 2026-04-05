@@ -5,7 +5,7 @@ const auth = require('../middlewares/auth');
 const router = Router();
 
 router.get('', [], ctrl.getAll);
-router.post('', [auth], ctrl.create);
+router.post('', [], ctrl.create);
 router.put('/:id', [auth], ctrl.update);
 router.delete('/:id', [auth], ctrl.delete);
 
