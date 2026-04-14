@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   app:
@@ -7,7 +7,7 @@ services:
       target: development-stage
       args:
         NODE_ENV: development
-    command: npm run dev
+    command: sh -c "npm install && npm uninstall bcrypt && npm install bcrypt && npm run dev"
     environment:
       NODE_ENV: development
     volumes:

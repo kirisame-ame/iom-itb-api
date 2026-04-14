@@ -1,0 +1,74 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production-stage
+      args:
+        NODE_ENV: production
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USERNAME: ${MYSQL_APP_USER:-iom_app}
+      DB_PASSWORD: ${MYSQL_APP_PASSWORD:-change-me}
+      DB_DATABASE: ${DB_DATABASE:-iom_itb}
+
+      SECRET_KEYS: ${SECRET_KEYS:-legacy_not_used_for_sso}
+      JWT_KEY: ${JWT_KEY:-legacy_not_used_for_sso}
+      URL_EXCEL: ${URL_EXCEL:-}
+
+      WEB_ADMIN_URL: ${WEB_ADMIN_URL}
+      WEB_APP_URL: ${WEB_APP_URL}
+      API_UPLOAD_URL: ${API_UPLOAD_URL}
+
+      KEYCLOAK_ISSUER_URL: ${KEYCLOAK_ISSUER_URL}
+      KEYCLOAK_JWKS_URI: ${KEYCLOAK_JWKS_URI}
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-backend-api}
+
+      SSO_APP_URL_WEB: ${SSO_APP_URL_WEB:-/dashboard}
+      SSO_APP_URL_APLIKASI_BANKES: ${SSO_APP_URL_APLIKASI_BANKES:-#}
+      SSO_APP_URL_APLIKASI_OTA: ${SSO_APP_URL_APLIKASI_OTA:-#}
+      SSO_APP_URL_APLIKASI_AKUNTING: ${SSO_APP_URL_APLIKASI_AKUNTING:-#}
+      SSO_APP_URL_APLIKASI_SEKRETARIAT: ${SSO_APP_URL_APLIKASI_SEKRETARIAT:-#}
+      SSO_APP_URL_APLIKASI_ISSUMIT: ${SSO_APP_URL_APLIKASI_ISSUMIT:-#}
+      SSO_APP_URL_APLIKASI_OKI_MANAJEMEN_INFORMASI: ${SSO_APP_URL_APLIKASI_OKI_MANAJEMEN_INFORMASI:-#}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    expose:
+      - "3000"
+    volumes:
+      - app-uploads:/usr/src/app/src/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change-root-password}
+      MYSQL_DATABASE: ${DB_DATABASE:-iom_itb}
+      MYSQL_USER: ${MYSQL_APP_USER:-iom_app}
+      MYSQL_PASSWORD: ${MYSQL_APP_PASSWORD:-change-me}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    expose:
+      - "3306"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot --password=\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 120s
+
+volumes:
+  mysql-data:
+  app-uploads:

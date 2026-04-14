@@ -22,9 +22,9 @@ const validateAccess = async (req, res, next) => {
       });
     }
 
-    const userRoleName = await extractRoleNameFromRoleId(res.locals.user.roleId);
+    const userRoles = await extractUserRoles(res.locals.user);
 
-    if (!PathRule[0].allowed_role.includes(userRoleName)) {
+    if (!PathRule[0].allowed_role.some((role) => userRoles.includes(role))) {
       throw new BaseError({
         status: StatusCodes.FORBIDDEN,
         message: `You have not access to this endpoint. Expected role: ${PathRule[0].allowed_role[0]}`,
@@ -32,6 +32,29 @@ const validateAccess = async (req, res, next) => {
     }
 
     next();
+
+const extractUserRoles = async (user) => {
+  const directRoles = [];
+
+  if (Array.isArray(user.roles) && user.roles.length > 0) {
+    directRoles.push(...user.roles);
+  }
+
+  if (user.roleName) {
+    directRoles.push(user.roleName);
+  }
+
+  if (directRoles.length > 0) {
+    return [...new Set(directRoles)];
+  }
+
+  if (user.roleId) {
+    const roleFromId = await extractRoleNameFromRoleId(user.roleId);
+    return roleFromId ? [roleFromId] : [];
+  }
+
+  return [];
+};
   } catch (error) {
     const status = error?.status || StatusCodes.INTERNAL_SERVER_ERROR;
     res

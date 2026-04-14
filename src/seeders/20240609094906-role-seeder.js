@@ -1,6 +1,7 @@
-'use strict';
+"use strict";
 
-const ROLE = require('../schemas/enums/role');
+const ROLE = require("../schemas/enums/role");
+const { v4: uuidv4 } = require("uuid");
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
@@ -16,17 +17,19 @@ module.exports = {
 
     const now = new Date();
     const roles = [
-      { id: Sequelize.literal('UUID()'), name: ROLE.Siswa, createdAt: now, updatedAt: now },
-      { id: Sequelize.literal('UUID()'), name: ROLE.Mahasiswa, createdAt: now, updatedAt: now },
-      { id: Sequelize.literal('UUID()'), name: ROLE.EO, createdAt: now, updatedAt: now },
-      { id: Sequelize.literal('UUID()'), name: ROLE.Sponsor, createdAt: now, updatedAt: now },
-      { id: Sequelize.literal('UUID()'), name: ROLE.Perusahaan, createdAt: now, updatedAt: now },
-      { id: Sequelize.literal('UUID()'), name: ROLE.Umum, createdAt: now, updatedAt: now },
-      { id: Sequelize.literal('UUID()'), name: ROLE.Juri, createdAt: now, updatedAt: now },
-      { id: Sequelize.literal('UUID()'), name: ROLE.Admin, createdAt: now, updatedAt: now },
+      { id: uuidv4(), name: ROLE.Siswa, createdAt: now, updatedAt: now },
+      { id: uuidv4(), name: ROLE.Mahasiswa, createdAt: now, updatedAt: now },
+      { id: uuidv4(), name: ROLE.EO, createdAt: now, updatedAt: now },
+      { id: uuidv4(), name: ROLE.Sponsor, createdAt: now, updatedAt: now },
+      { id: uuidv4(), name: ROLE.Perusahaan, createdAt: now, updatedAt: now },
+      { id: uuidv4(), name: ROLE.Umum, createdAt: now, updatedAt: now },
+      { id: uuidv4(), name: ROLE.Juri, createdAt: now, updatedAt: now },
+      { id: uuidv4(), name: ROLE.Admin, createdAt: now, updatedAt: now },
     ];
 
-    return queryInterface.bulkInsert('Roles', roles);
+    return queryInterface.bulkInsert("Roles", roles, {
+      ignoreDuplicates: true,
+    });
   },
 
   async down(queryInterface, Sequelize) {
@@ -39,6 +42,6 @@ module.exports = {
     //   primaryKey: true,
     // });
 
-    return queryInterface.bulkDelete('Roles', null, {});
-  }
+    return queryInterface.bulkDelete("Roles", null, {});
+  },
 };

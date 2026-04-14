@@ -22,10 +22,11 @@ services:
     container_name: db
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
     volumes:
       - db:/var/lib/mysql
     ports:
-      - "3306:3306"
+      - "3307:3306"
 
   nginx:
     image: nginx:alpine
