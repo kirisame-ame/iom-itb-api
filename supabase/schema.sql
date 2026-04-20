@@ -159,3 +159,19 @@ drop trigger if exists trg_transactions_updated_at on "Transactions";
 create trigger trg_transactions_updated_at
 before update on "Transactions"
 for each row execute function set_updated_at();
+
+
+create table if not exists "Kemitraan" (
+  id bigserial primary key,
+  name text not null,
+  description text,
+  image text,
+  mou text,
+  "createdAt" timestamptz not null default now(),
+  "updatedAt" timestamptz not null default now()
+);
+
+drop trigger if exists trg_kemitraan_updated_at on "Kemitraan";
+create trigger trg_kemitraan_updated_at
+before update on "Kemitraan"
+for each row execute function set_updated_at();
