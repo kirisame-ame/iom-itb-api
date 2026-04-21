@@ -103,7 +103,7 @@ const createTransactionDraft = async (payload) => {
     const trx = await Transactions.create({
       merchandiseId, username, email, noTelp, address, qty,
       status: 'waiting',
-      payment: null,
+      payment: 'midtrans',
       paymentMethod: 'midtrans',
       paymentStatus: 'pending',
       grossAmount,
