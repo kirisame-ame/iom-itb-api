@@ -18,6 +18,8 @@ const fileRouter = require('./file');
 const CompetitionRouter = require('./competition');
 const DanaBantuan = require('./danaBantuan');
 const KemitraanRouter = require('./kemitraan');
+const FacultyRouter = require('./faculties');
+const PaymentRouter = require('./payments');
 
 router.get('/', (req, res) => {
   res.json({
@@ -42,5 +44,7 @@ router.use('/file', fileRouter);
 router.use('/competition', CompetitionRouter);
 router.use('/dana-bantuan', DanaBantuan);
 router.use('/kemitraan', KemitraanRouter);
+router.use('/faculties', FacultyRouter);
+router.use('/payments', PaymentRouter);
 
 module.exports = router;
