@@ -21,7 +21,7 @@ const buildFinishUrl = () => {
 const createDonationDraft = async (payload) => {
   const {
     name, email, noWhatsapp, notification,
-    donationType, facultyId, grossAmount, options = {},
+    donationType, facultyId, options = {},
   } = payload;
 
   if (!name || !email || !noWhatsapp || !notification) {
@@ -36,11 +36,11 @@ const createDonationDraft = async (payload) => {
       message: 'Invalid donationType',
     });
   }
-  const amount = Number(grossAmount);
+  const amount = Number(payload.amount);
   if (!amount || amount <= 0) {
     throw new BaseError({
       status: StatusCodes.BAD_REQUEST,
-      message: 'grossAmount must be > 0',
+      message: 'amount must be > 0',
     });
   }
 

@@ -3,6 +3,16 @@ const { Donations, Transactions, sequelize } = require('../../models');
 const BaseError = require('../../schemas/responses/BaseError');
 const { coreApi } = require('../../config/midtrans');
 const { decreaseMerchandiseStock } = require('./stockHelper');
+const { sendTransactionInvoice, sendDonationInvoice } = require('./sendInvoiceEmail');
+
+const fireInvoice = (sendFn, record, kind) => {
+  Promise.resolve()
+    .then(() => sendFn(record))
+    // eslint-disable-next-line no-console
+    .then(() => console.log(`[invoice] ${kind} invoice sent for ${record.midtransOrderId || record.id}`))
+    // eslint-disable-next-line no-console
+    .catch((err) => console.error(`[invoice] failed to send ${kind} invoice:`, err.message));
+};
 
 const mapStatus = (statusResponse) => {
   const { transaction_status: trxStatus, fraud_status: fraudStatus } = statusResponse;
@@ -59,6 +69,7 @@ const updateDonation = async (orderId, newStatus, midtransTransactionId) => {
       return { orderId, newStatus, changed: false };
     }
 
+    const previousDonationStatus = donation.paymentStatus;
     donation.paymentStatus = newStatus;
     donation.midtransTransactionId = midtransTransactionId || donation.midtransTransactionId;
     if (newStatus === 'settlement' && !donation.date) {
@@ -67,6 +78,11 @@ const updateDonation = async (orderId, newStatus, midtransTransactionId) => {
     await donation.save({ transaction: t });
 
     await t.commit();
+
+    if (newStatus === 'settlement' && previousDonationStatus !== 'settlement') {
+      fireInvoice(sendDonationInvoice, donation, 'donation');
+    }
+
     return { orderId, newStatus, changed: true, scope: 'donation' };
   } catch (error) {
     if (t && !t.finished) await t.rollback();
@@ -103,6 +119,11 @@ const updateTransaction = async (orderId, newStatus, midtransTransactionId) => {
 
     await trx.save({ transaction: t });
     await t.commit();
+
+    if (newStatus === 'settlement' && previousStatus !== 'settlement') {
+      fireInvoice(sendTransactionInvoice, trx, 'transaction');
+    }
+
     return { orderId, newStatus, changed: true, scope: 'transaction' };
   } catch (error) {
     if (t && !t.finished) await t.rollback();
