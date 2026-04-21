@@ -1,43 +1,36 @@
-// require('dotenv').config();
+const nodemailer = require('nodemailer');
 
-// const nodemailer = require('nodemailer');
-// const { google } = require('googleapis');
+const host = process.env.EMAIL_HOST;
+const port = Number(process.env.EMAIL_PORT || 587);
+const user = process.env.EMAIL_USER;
+const pass = process.env.EMAIL_PASS;
 
-// //credentials
+if (!host || !user || !pass) {
+  // eslint-disable-next-line no-console
+  console.warn('[mailer] EMAIL_HOST / EMAIL_USER / EMAIL_PASS not fully set. Emails will fail until configured.');
+}
 
-// const oAuth2Client = new google.auth.OAuth2(
-//   process.env.MAIL_CLIENT_ID,
-//   process.env.MAIL_CLIENT_SECRET,
-//   process.env.MAIL_REDIRECT_URL,
-// );
+const transporter = nodemailer.createTransport({
+  host,
+  port,
+  secure: port === 465,
+  auth: { user, pass },
+});
 
-// oAuth2Client.setCredentials({
-//   refresh_token: process.env.MAIL_REFRESH_TOKEN,
-// });
+const fromAddress = process.env.EMAIL_FROM || `IOM ITB <${user}>`;
 
-// // Function to generate OAuth2 access token
-// const getAccessToken = () => {
-//     return new Promise((resolve, reject) => {
-//       oAuth2Client.getAccessToken((err, token) => {
-//         if (err) {
-//           reject(err);
-//         } else {
-//           resolve(token);
-//         }
-//       });
-//     });
-//   };
+const sendMail = async ({ to, cc, subject, html, text }) => {
+  const recipients = Array.isArray(to) ? to.filter(Boolean) : [to].filter(Boolean);
+  if (recipients.length === 0) throw new Error('sendMail: no recipients');
 
-// const transporter = nodemailer.createTransport({
-//     service: 'gmail',
-//     auth: {
-//         type: 'OAuth2',
-//         user: process.env.MAIL_USER,
-//         clientId: process.env.MAIL_CLIENT_ID,
-//         clientSecret: process.env.MAIL_CLIENT_SECRET,
-//         refreshToken: process.env.MAIL_REFRESH_TOKEN,
-//         accessToken: getAccessToken(),
-//     },
-// });
+  return transporter.sendMail({
+    from: fromAddress,
+    to: recipients.join(', '),
+    cc: cc ? (Array.isArray(cc) ? cc.join(', ') : cc) : undefined,
+    subject,
+    html,
+    text,
+  });
+};
 
-// module.exports = transporter;
+module.exports = { transporter, sendMail };

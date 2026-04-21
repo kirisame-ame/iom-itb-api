@@ -31,6 +31,8 @@ const CreateTransaction = async (body, files, uploadPath) => {
     // Handle image file for payment
     const imageFileName = imageFile ? `${uploadPath}/public/images/transactions/${imageFile.filename}` : null;
 
+    const grossAmount = Number(merchandise.price) * Number(qty);
+
     // Create the transaction record within a transaction
     const newTransaction = await Transactions.create(
       {
@@ -42,6 +44,9 @@ const CreateTransaction = async (body, files, uploadPath) => {
         qty,
         payment: imageFileName, // Store the payment image path
         status: 'waiting', // Default status
+        paymentMethod: 'manual',
+        paymentStatus: 'pending',
+        grossAmount,
       },
       { transaction }
     );
