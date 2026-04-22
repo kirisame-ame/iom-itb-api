@@ -69,6 +69,9 @@ app.use(
 app.use(morgan('dev'));
 // app.use(helmet());
 
+// Tally webhook needs raw body for signature verification.
+app.use('/webhooks/tally', express.raw({ type: 'application/json' }));
+
 // Manual CORS implementation
 app.use((req, res, next) => {
   const origin = req.headers.origin;

@@ -9,6 +9,11 @@
 
 A comprehensive RESTful API backend for the IOM ITB (Ikatan Orangtua Mahasiswa Institut Teknologi Bandung) organization. This API provides endpoints for managing members, activities, donations, competitions, and various organizational functions.
 
+## New Contributor Guide
+
+- For Tally webhook, migration, seeding, and deployment operations, read [TALLY-OPERATIONS-RUNBOOK.md](./TALLY-OPERATIONS-RUNBOOK.md).
+- For implementation-level Tally developer guidance, read [TALLY-DEV-NOTES.md](./TALLY-DEV-NOTES.md).
+
 ## 🚀 Features
 
 - **Authentication & Authorization**: JWT-based authentication with role-based access control

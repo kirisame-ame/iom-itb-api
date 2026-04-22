@@ -20,6 +20,8 @@ const DanaBantuan = require('./danaBantuan');
 const KemitraanRouter = require('./kemitraan');
 const FacultyRouter = require('./faculties');
 const PaymentRouter = require('./payments');
+const TallyWebhookRouter = require('./tallyWebhooks');
+const TallySubmissionsRouter = require('./tallySubmissions');
 
 router.get('/', (req, res) => {
   res.json({
@@ -46,5 +48,7 @@ router.use('/dana-bantuan', DanaBantuan);
 router.use('/kemitraan', KemitraanRouter);
 router.use('/faculties', FacultyRouter);
 router.use('/payments', PaymentRouter);
+router.use('/webhooks/tally', TallyWebhookRouter);
+router.use('/tally-submissions', TallySubmissionsRouter);
 
 module.exports = router;
