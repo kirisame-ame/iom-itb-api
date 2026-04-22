@@ -4,7 +4,7 @@ const BaseError = require('../../schemas/responses/BaseError');
 const { snap } = require('../../utils/midtrans');
 
 const createDonationSnapToken = async (payload) => {
-  const { name, email, noWhatsapp, amount, donationType, facultyId, notification } = payload;
+  const { name, email, noWhatsapp, amount, donationType, facultyId, notification, nameIsHidden, isHambaAllah } = payload;
 
   if (!name || !email || !noWhatsapp || !amount) {
     throw new BaseError({
@@ -22,9 +22,13 @@ const createDonationSnapToken = async (payload) => {
       noWhatsapp,
       notification: notification || [],
       amount,
+      nameIsHidden: nameIsHidden || false,
+      isHambaAllah: isHambaAllah || false,
       options: {
         donationType: donationType || null,
         facultyId: facultyId || null,
+        nameIsHidden: nameIsHidden || false,
+        isHambaAllah: isHambaAllah || false,
       },
       bank: 'Midtrans',
     }, { transaction: tx });

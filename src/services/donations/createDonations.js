@@ -32,6 +32,8 @@ const CreateDonations = async (body) => {
         proof,
         notification,
         amount,
+        nameIsHidden,
+        isHambaAllah,
         options: {
           nameIsHidden: nameIsHidden,
           isHambaAllah:  isHambaAllah

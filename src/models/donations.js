@@ -70,6 +70,16 @@ module.exports = (sequelize, DataTypes) => {
     midtrans_order_id: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    nameIsHidden: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: true
+    },
+    isHambaAllah: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: true
     }
   }, {
     sequelize,

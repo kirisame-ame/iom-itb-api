@@ -17,6 +17,7 @@ const getCorsOrigins = () => {
     'http://localhost:3000',
     'http://localhost:8080',
     'http://localhost:8081',
+    'http://localhost:8082',
     'https://iom-itb-api.vercel.app',
     'https://iom-itb-app.vercel.app',
     'https://iom-itb-admin-nu.vercel.app',
