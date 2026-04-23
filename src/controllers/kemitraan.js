@@ -5,7 +5,7 @@ const getKemitraanService = require('../services/kemitraan/getKemitraan');
 const updateKemitraanService = require('../services/kemitraan/updateKemitraan');
 const deleteKemitraanService = require('../services/kemitraan/deleteKemitraan');
 
-const createKemitraan = async (req, res, next) => {
+const CreateKemitraan = async (req, res, next) => {
   try {
     const result = await createKemitraanService(req.body);
     return res.status(StatusCodes.CREATED).json(
@@ -15,27 +15,27 @@ const createKemitraan = async (req, res, next) => {
         data: result,
       })
     );
-  } catch (error) { 
-    next(error); 
+  } catch (error) {
+    next(error);
   }
 };
 
-const getKemitraan = async (req, res, next) => {
+const GetKemitraan = async (req, res, next) => {
   try {
     const result = await getKemitraanService(req.query);
-    
+
     return res.status(StatusCodes.OK).json({
       status: StatusCodes.OK,
       message: 'Successfully fetched Kemitraan',
       data: result.data,
       pagination: result.pagination,
     });
-  } catch (error) { 
-    next(error); 
+  } catch (error) {
+    next(error);
   }
 };
 
-const updateKemitraan = async (req, res, next) => {
+const UpdateKemitraan = async (req, res, next) => {
   try {
     const result = await updateKemitraanService(req.params.id, req.body);
     return res.status(StatusCodes.OK).json(
@@ -50,7 +50,7 @@ const updateKemitraan = async (req, res, next) => {
   }
 };
 
-const deleteKemitraan = async (req, res, next) => {
+const DeleteKemitraan = async (req, res, next) => {
   try {
     await deleteKemitraanService(req.params.id);
     return res.status(StatusCodes.OK).json(
@@ -66,8 +66,8 @@ const deleteKemitraan = async (req, res, next) => {
 };
 
 module.exports = {
-  createKemitraan,
-  getKemitraan,
-  updateKemitraan,
-  deleteKemitraan,
+  CreateKemitraan,
+  GetKemitraan,
+  UpdateKemitraan,
+  DeleteKemitraan,
 };

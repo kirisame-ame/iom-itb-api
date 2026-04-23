@@ -1,17 +1,17 @@
 const { Router } = require('express');
-const { 
-  createKemitraan, 
-  getKemitraan, 
-  updateKemitraan, 
-  deleteKemitraan 
+const {
+  CreateKemitraan,
+  GetKemitraan,
+  UpdateKemitraan,
+  DeleteKemitraan
 } = require('../controllers/kemitraan');
 const auth = require('../middlewares/auth');
 
 const router = Router();
 
-router.get('', [], getKemitraan);
-router.post('', [auth], createKemitraan);
-router.put('/:id', [auth], updateKemitraan);
-router.delete('/:id', [auth], deleteKemitraan);
+router.get('', [], GetKemitraan);
+router.post('', [auth], CreateKemitraan);
+router.put('/:id', [auth], UpdateKemitraan);
+router.delete('/:id', [auth], DeleteKemitraan);
 
 module.exports = router;
