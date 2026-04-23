@@ -100,7 +100,7 @@ module.exports = {
     await queryInterface.sequelize.query(`
       INSERT INTO PengajuanBantuanStatuses
         (submissionId, currentStatus, catatan, updatedBy, createdAt, updatedAt)
-      SELECT ts.id, 'VERIFIKASI_BERKAS', NULL, 'SEEDER', NOW(), NOW()
+      SELECT ts.id, 'TIDAK_DIKETAHUI', NULL, 'SEEDER', NOW(), NOW()
       FROM TallySubmissions ts
       WHERE ts.formSlug = 'pengajuan_bantuan'
       AND NOT EXISTS (SELECT 1 FROM PengajuanBantuanStatuses pbs WHERE pbs.submissionId = ts.id)
