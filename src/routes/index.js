@@ -17,6 +17,10 @@ const TransactionRouter = require('./transactions');
 const fileRouter = require('./file');
 const CompetitionRouter = require('./competition');
 const DanaBantuan = require('./danaBantuan');
+const KemitraanRouter = require('./kemitraan');
+const kegiatanKemitraanRouter = require('./kegiatanKemitraan');
+const PaymentsRouter = require('./payments');
+const FacultiesRouter = require('./faculties');
 
 router.get('/', (req, res) => {
   res.json({
@@ -40,5 +44,9 @@ router.use('/transactions', TransactionRouter);
 router.use('/file', fileRouter);
 router.use('/competition', CompetitionRouter);
 router.use('/dana-bantuan', DanaBantuan);
+router.use('/kemitraan', KemitraanRouter);
+router.use('/kegiatan-kemitraan', kegiatanKemitraanRouter);
+router.use('/payments', PaymentsRouter);
+router.use('/faculties', FacultiesRouter);
 
 module.exports = router;
