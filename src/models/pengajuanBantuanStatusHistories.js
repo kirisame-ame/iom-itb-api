@@ -24,6 +24,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       oldStatus: {
         type: DataTypes.ENUM(
+          'TIDAK_DIKETAHUI',
           'VERIFIKASI_BERKAS',
           'DIPANGGIL_WAWANCARA',
           'KEPUTUSAN_DITERIMA',
@@ -33,6 +34,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       newStatus: {
         type: DataTypes.ENUM(
+          'TIDAK_DIKETAHUI',
           'VERIFIKASI_BERKAS',
           'DIPANGGIL_WAWANCARA',
           'KEPUTUSAN_DITERIMA',

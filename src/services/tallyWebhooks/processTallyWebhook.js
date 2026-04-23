@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { UniqueConstraintError } = require('sequelize');
 const db = require('../../models');
 const triggerWhatsappNotificationStub = require('./triggerWhatsappNotificationStub');
+const { buildWebhookNormalized } = require('../../utils/tallyPayloadNormalizer');
 
 const FORM_SLUGS = {
   PENDAFTARAN_ANGGOTA: 'pendaftaran_anggota',
@@ -11,273 +12,116 @@ const FORM_SLUGS = {
   ORANG_TUA_ASUH: 'orang_tua_asuh',
 };
 
-function normalizeTextForMatching(input) {
-  return String(input || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function isPhoneLikeLabelOrKey(input) {
-  const normalized = normalizeTextForMatching(input);
-
-  if (!normalized) {
-    return false;
-  }
-
-  return (
-    normalized.includes('nomor wa') ||
-    normalized.includes('no wa') ||
-    normalized.includes('whatsapp') ||
-    normalized.includes('nomor hp') ||
-    normalized.includes('phone number') ||
-    normalized === 'phone' ||
-    normalized.includes(' phone ')
-  );
-}
-
 function getNestedValue(obj, path) {
-  const parts = path.split('.');
-  let current = obj;
-
-  for (const part of parts) {
-    if (current === null || current === undefined) {
-      return null;
-    }
-    current = current[part];
-  }
-
-  return current ?? null;
+  return path.split('.').reduce((cur, part) => (cur == null ? null : cur[part]), obj) ?? null;
 }
 
-function pickFirst(payload, paths) {
+function pickFirst(obj, paths) {
   for (const p of paths) {
-    const value = getNestedValue(payload, p);
-    if (value !== null && value !== undefined && String(value).trim() !== '') {
-      return String(value).trim();
-    }
+    const v = getNestedValue(obj, p);
+    if (v !== null && v !== undefined && String(v).trim() !== '') return String(v).trim();
   }
-  return null;
-}
-
-function pickWhatsappRecursively(node) {
-  if (node === null || node === undefined) {
-    return null;
-  }
-
-  if (Array.isArray(node)) {
-    for (const item of node) {
-      const found = pickWhatsappRecursively(item);
-      if (found) {
-        return found;
-      }
-    }
-    return null;
-  }
-
-  if (typeof node === 'object') {
-    for (const [rawKey, value] of Object.entries(node)) {
-      if (isPhoneLikeLabelOrKey(rawKey)) {
-        if (value !== null && value !== undefined && String(value).trim() !== '') {
-          return String(value).trim();
-        }
-      }
-
-      const nested = pickWhatsappRecursively(value);
-      if (nested) {
-        return nested;
-      }
-    }
-  }
-
-  return null;
-}
-
-function pickWhatsappFromTallyFields(payload) {
-  const fields = getNestedValue(payload, 'data.fields') || getNestedValue(payload, 'event.data.fields');
-
-  if (!Array.isArray(fields)) {
-    return null;
-  }
-
-  // Tally officially provides typed fields. Prefer explicit phone field type first.
-  const phoneField = fields.find((field) => {
-    return (
-      field &&
-      String(field.type || '').toUpperCase() === 'INPUT_PHONE_NUMBER' &&
-      field.value !== null &&
-      field.value !== undefined &&
-      String(field.value).trim() !== ''
-    );
-  });
-
-  if (phoneField) {
-    return String(phoneField.value).trim();
-  }
-
-  // Fallback to label matching for custom text/number fields used as phone/WA.
-  const labelMatched = fields.find((field) => {
-    const hasPhoneLabel = isPhoneLikeLabelOrKey(field?.label || field?.key || '');
-
-    return hasPhoneLabel && field?.value !== null && field?.value !== undefined && String(field.value).trim() !== '';
-  });
-
-  if (labelMatched) {
-    return String(labelMatched.value).trim();
-  }
-
   return null;
 }
 
 function parseDate(value) {
-  if (!value) {
-    return null;
-  }
-
-  const asString = String(value).trim();
-  if (!asString) {
-    return null;
-  }
-
-  if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$/.test(asString)) {
-    return new Date(asString.replace(' ', 'T') + 'Z');
-  }
-
-  const parsed = new Date(asString);
-  if (Number.isNaN(parsed.getTime())) {
-    return null;
-  }
-
-  return parsed;
+  if (!value) return null;
+  const s = String(value).trim();
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$/.test(s)) return new Date(s.replace(' ', 'T') + 'Z');
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
 function sha256Hex(inputBuffer) {
   return crypto.createHash('sha256').update(inputBuffer).digest('hex');
 }
 
-function extractSignatureCandidates(signatureHeaderValue) {
-  if (!signatureHeaderValue) {
-    return [];
-  }
-
-  const raw = String(signatureHeaderValue).trim();
+function extractSignatureCandidates(headerValue) {
+  if (!headerValue) return [];
+  const raw = String(headerValue).trim();
   const candidates = [raw];
-
-  // Supports values like: sha256=<hex> or t=...,v1=<hex>
   raw.split(',').forEach((segment) => {
     const [key, value] = segment.split('=');
-    if (!value) {
-      return;
-    }
-
-    const normalizedKey = String(key || '').trim().toLowerCase();
-    const normalizedValue = String(value || '').trim();
-
-    if (normalizedKey === 'v1' || normalizedKey === 'sha256') {
-      candidates.push(normalizedValue);
-    }
+    if (!value) return;
+    const k = String(key || '').trim().toLowerCase();
+    if (k === 'v1' || k === 'sha256') candidates.push(String(value).trim());
   });
-
   return [...new Set(candidates)];
 }
 
 function safeEqual(a, b) {
   const aBuf = Buffer.from(String(a));
   const bBuf = Buffer.from(String(b));
-
-  if (aBuf.length !== bBuf.length) {
-    return false;
-  }
-
+  if (aBuf.length !== bBuf.length) return false;
   return crypto.timingSafeEqual(aBuf, bBuf);
 }
 
 function isSignatureValid({ rawBody, signatureHeaderValue, secret }) {
-  if (!secret) {
-    return false;
-  }
-
-  // Tally docs show base64 digest in examples. We support both base64 and hex variants.
+  if (!secret) return false;
   const expectedBase64 = crypto.createHmac('sha256', secret).update(rawBody).digest('base64');
   const expectedHex = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
-  const candidates = extractSignatureCandidates(signatureHeaderValue);
-
-  return candidates.some((candidate) => {
-    const normalized = String(candidate).replace(/^sha256=/i, '').trim();
-    return safeEqual(normalized, expectedBase64) || safeEqual(normalized, expectedHex);
+  return extractSignatureCandidates(signatureHeaderValue).some((candidate) => {
+    const n = String(candidate).replace(/^sha256=/i, '').trim();
+    return safeEqual(n, expectedBase64) || safeEqual(n, expectedHex);
   });
 }
 
-function normalizePayload(rawBodyBuffer) {
-  let payload = {};
-
+function parseWebhookBody(rawBodyBuffer, formSlug) {
+  let rawPayload;
   try {
-    payload = JSON.parse(rawBodyBuffer.toString('utf8'));
-  } catch (error) {
-    const parseError = new Error('Invalid JSON payload');
-    parseError.status = 400;
-    throw parseError;
+    rawPayload = JSON.parse(rawBodyBuffer.toString('utf8'));
+  } catch {
+    const err = new Error('Invalid JSON payload');
+    err.status = 400;
+    throw err;
   }
 
-  const submissionId = pickFirst(payload, [
+  const { payload, extractedWhatsapp } = buildWebhookNormalized(rawPayload, formSlug);
+  const submittedAt = parseDate(payload.submittedAt) || new Date();
+
+  const payloadEventId = pickFirst(rawPayload, [
+    'eventId',
+    'data.responseId',
     'data.submissionId',
-    'event.data.submissionId',
-    'submissionId',
-    'Submission ID',
   ]);
-
-  const respondentId = pickFirst(payload, [
-    'data.respondentId',
-    'event.data.respondentId',
-    'respondentId',
-    'Respondent ID',
-  ]);
-
-  const formId = pickFirst(payload, ['data.formId', 'event.data.formId', 'formId']);
-
-  const submittedAtRaw =
-    pickFirst(payload, ['data.submittedAt', 'data.createdAt', 'event.data.createdAt', 'submittedAt', 'createdAt']) ||
-    null;
-
-  const submittedAt = parseDate(submittedAtRaw) || new Date();
-  const extractedWhatsapp = pickWhatsappFromTallyFields(payload) || pickWhatsappRecursively(payload);
 
   return {
+    rawPayload,
     payload,
-    submissionId,
-    respondentId,
-    formId,
+    submissionId: payload.submissionId,
+    respondentId: payload.respondentId,
+    formId: payload.formId,
     submittedAt,
     extractedWhatsapp,
+    payloadEventId,
   };
 }
 
 async function processTallyWebhook({ formSlug, headers, rawBody }) {
   const secret = process.env.TALLY_WEBHOOK_SECRET || '';
-  const signatureHeaderName = (process.env.TALLY_WEBHOOK_SIGNATURE_HEADER || 'tally-signature').toLowerCase();
+  const signatureHeaderName = (
+    process.env.TALLY_WEBHOOK_SIGNATURE_HEADER || 'tally-signature'
+  ).toLowerCase();
   const signatureRequired =
     process.env.TALLY_WEBHOOK_SIGNATURE_REQUIRED === 'true' || process.env.NODE_ENV === 'production';
 
-  const signatureHeaderValue = headers[signatureHeaderName] || headers[signatureHeaderName.toLowerCase()] || null;
+  const signatureHeaderValue = headers[signatureHeaderName] || null;
 
-  if (signatureRequired) {
-    const valid = isSignatureValid({ rawBody, signatureHeaderValue, secret });
-    if (!valid) {
-      const unauthorizedError = new Error('Invalid webhook signature');
-      unauthorizedError.status = 401;
-      throw unauthorizedError;
-    }
+  if (signatureRequired && !isSignatureValid({ rawBody, signatureHeaderValue, secret })) {
+    const err = new Error('Invalid webhook signature');
+    err.status = 401;
+    throw err;
   }
 
-  const normalized = normalizePayload(rawBody);
-  const fallbackSubmissionHash = sha256Hex(rawBody).slice(0, 40);
-  const tallySubmissionId = normalized.submissionId || fallbackSubmissionHash;
-  const payloadEventId = pickFirst(normalized.payload, ['eventId', 'data.responseId', 'data.submissionId']);
+  const normalized = parseWebhookBody(rawBody, formSlug);
+  const fallbackHash = sha256Hex(rawBody).slice(0, 40);
+  const tallySubmissionId = normalized.submissionId || fallbackHash;
+
   const eventKeySource =
     headers['x-tally-event-id'] ||
     headers['x-webhook-id'] ||
-    payloadEventId ||
+    normalized.payloadEventId ||
     `${formSlug}:${tallySubmissionId}:${normalized.submittedAt.toISOString()}`;
   const eventKey = `${formSlug}:${eventKeySource}`;
 
@@ -293,11 +137,7 @@ async function processTallyWebhook({ formSlug, headers, rawBody }) {
       receivedAt: new Date(),
     });
   } catch (error) {
-    if (error instanceof UniqueConstraintError) {
-      return {
-        duplicated: true,
-      };
-    }
+    if (error instanceof UniqueConstraintError) return { duplicated: true };
     throw error;
   }
 
@@ -318,18 +158,13 @@ async function processTallyWebhook({ formSlug, headers, rawBody }) {
       );
 
       const submission = await db.TallySubmissions.findOne({
-        where: {
-          formSlug,
-          tallySubmissionId,
-        },
+        where: { formSlug, tallySubmissionId },
         transaction,
       });
 
       if (formSlug === FORM_SLUGS.PENGAJUAN_BANTUAN && submission) {
         await db.PengajuanBantuanStatuses.findOrCreate({
-          where: {
-            submissionId: submission.id,
-          },
+          where: { submissionId: submission.id },
           defaults: {
             submissionId: submission.id,
             currentStatus: 'VERIFIKASI_BERKAS',
@@ -362,43 +197,26 @@ async function processTallyWebhook({ formSlug, headers, rawBody }) {
       }
 
       await webhookEvent.update(
-        {
-          processStatus: 'PROCESSED',
-          processedAt: new Date(),
-          errorMessage: null,
-        },
+        { processStatus: 'PROCESSED', processedAt: new Date(), errorMessage: null },
         { transaction },
       );
     });
 
     const processedSubmission = await db.TallySubmissions.findOne({
-      where: {
-        formSlug,
-        tallySubmissionId,
-      },
+      where: { formSlug, tallySubmissionId },
     });
 
-    await triggerWhatsappNotificationStub({
-      formSlug,
-      submission: processedSubmission,
-    });
+    await triggerWhatsappNotificationStub({ formSlug, submission: processedSubmission });
 
-    return {
-      duplicated: false,
-      tallySubmissionId,
-    };
+    return { duplicated: false, tallySubmissionId };
   } catch (error) {
     await webhookEvent.update({
       processStatus: 'FAILED',
       errorMessage: error.message,
       processedAt: new Date(),
     });
-
     throw error;
   }
 }
 
-module.exports = {
-  FORM_SLUGS,
-  processTallyWebhook,
-};
+module.exports = { FORM_SLUGS, processTallyWebhook };
