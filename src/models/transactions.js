@@ -62,7 +62,30 @@ module.exports = (sequelize, DataTypes) => {
     },
     payment: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: true
+    },
+    paymentMethod: {
+      type: DataTypes.ENUM('manual', 'midtrans'),
+      allowNull: false,
+      defaultValue: 'manual'
+    },
+    paymentStatus: {
+      type: DataTypes.ENUM('pending', 'settlement', 'expired', 'failed', 'refunded'),
+      allowNull: false,
+      defaultValue: 'pending'
+    },
+    midtransOrderId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true
+    },
+    midtransTransactionId: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    grossAmount: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: true
     }
   }, {
     sequelize,
