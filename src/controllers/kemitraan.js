@@ -1,73 +1,115 @@
 const { StatusCodes } = require('http-status-codes');
 const BaseResponse = require('../schemas/responses/BaseResponse');
-const createKemitraanService = require('../services/kemitraan/createKemitraan');
-const getKemitraanService = require('../services/kemitraan/getKemitraan');
-const updateKemitraanService = require('../services/kemitraan/updateKemitraan');
-const deleteKemitraanService = require('../services/kemitraan/deleteKemitraan');
+const DataTable = require('../schemas/responses/DataTable');
+const CreateKemitraan = require('../services/kemitraan/createKemitraan');
+const GetKemitraan = require('../services/kemitraan/getKemitraan');
+const UpdateKemitraan = require('../services/kemitraan/updateKemitraan');
+const DeleteKemitraan = require('../services/kemitraan/deleteKemitraan');
 
-const CreateKemitraan = async (req, res, next) => {
+const GetKemitraanById = async (req, res) => {
   try {
-    const result = await createKemitraanService(req.body);
-    return res.status(StatusCodes.CREATED).json(
-      new BaseResponse({
-        status: StatusCodes.CREATED,
-        message: 'Successfully created Kemitraan',
-        data: result,
-      })
-    );
-  } catch (error) {
-    next(error);
-  }
-};
+    const { id } = req.params;
+    const kemitraan = await GetKemitraan(id);
 
-const GetKemitraan = async (req, res, next) => {
-  try {
-    const result = await getKemitraanService(req.query);
+    if (!kemitraan) {
+      return res.status(StatusCodes.NOT_FOUND).json(new BaseResponse({
+        status: StatusCodes.NOT_FOUND,
+        message: 'Kemitraan tidak ditemukan',
+      }));
+    }
 
-    return res.status(StatusCodes.OK).json({
+    res.status(StatusCodes.OK).json(new BaseResponse({
       status: StatusCodes.OK,
-      message: 'Successfully fetched Kemitraan',
-      data: result.data,
-      pagination: result.pagination,
-    });
+      message: 'Kemitraan ditemukan',
+      data: kemitraan,
+    }));
   } catch (error) {
-    next(error);
+    const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
+    res.status(status).json(new BaseResponse({
+      status,
+      message: error.message || 'Terjadi kesalahan saat mengambil Kemitraan',
+    }));
   }
 };
 
-const UpdateKemitraan = async (req, res, next) => {
+const GetAllKemitraan = async (req, res) => {
   try {
-    const result = await updateKemitraanService(req.params.id, req.body);
-    return res.status(StatusCodes.OK).json(
-      new BaseResponse({
-        status: StatusCodes.OK,
-        message: 'Successfully updated Kemitraan',
-        data: result,
-      })
-    );
+    const { search, page, limit, type, status } = req.query;
+
+    const kemitraan = await GetKemitraan(null, { page, limit, type, status }, search);
+
+    res.status(StatusCodes.OK).json(new DataTable(kemitraan.data, kemitraan.total));
   } catch (error) {
-    next(error);
+    const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
+    res.status(status).json(new BaseResponse({
+      status,
+      message: error.message,
+    }));
   }
 };
 
-const DeleteKemitraan = async (req, res, next) => {
+const CreateNewKemitraan = async (req, res) => {
   try {
-    await deleteKemitraanService(req.params.id);
-    return res.status(StatusCodes.OK).json(
-      new BaseResponse({
-        status: StatusCodes.OK,
-        message: 'Successfully deleted Kemitraan',
-        data: null,
-      })
-    );
+    const { body, files } = req;
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const newKemitraan = await CreateKemitraan(body, files, baseUrl);
+
+    res.status(StatusCodes.CREATED).json(new BaseResponse({
+      status: StatusCodes.CREATED,
+      message: 'Kemitraan created successfully',
+      data: newKemitraan,
+    }));
   } catch (error) {
-    next(error);
+    const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
+    res.status(status).json(new BaseResponse({
+      status,
+      message: error.message || 'Failed to create Kemitraan',
+    }));
+  }
+};
+
+const UpdateKemitraanById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { body, files } = req;
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const updatedKemitraan = await UpdateKemitraan(id, body, files, baseUrl);
+
+    res.status(StatusCodes.OK).json(new BaseResponse({
+      status: StatusCodes.OK,
+      message: 'Kemitraan berhasil diperbarui',
+      data: updatedKemitraan,
+    }));
+  } catch (error) {
+    const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
+    res.status(status).json(new BaseResponse({
+      status,
+      message: error.message,
+    }));
+  }
+};
+
+const DeleteKemitraanById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await DeleteKemitraan(id);
+    res.status(StatusCodes.OK).json(new BaseResponse({
+      status: StatusCodes.OK,
+      message: result.message,
+    }));
+  } catch (error) {
+    const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
+    res.status(status).json(new BaseResponse({
+      status,
+      message: error.message,
+    }));
   }
 };
 
 module.exports = {
-  CreateKemitraan,
-  GetKemitraan,
-  UpdateKemitraan,
-  DeleteKemitraan,
+  GetKemitraanById,
+  GetAllKemitraan,
+  CreateNewKemitraan,
+  UpdateKemitraanById,
+  DeleteKemitraanById,
 };

@@ -1,17 +1,29 @@
 const { Router } = require('express');
 const {
-  CreateKemitraan,
-  GetKemitraan,
-  UpdateKemitraan,
-  DeleteKemitraan
+  GetKemitraanById,
+  GetAllKemitraan,
+  CreateNewKemitraan,
+  UpdateKemitraanById,
+  DeleteKemitraanById,
 } = require('../controllers/kemitraan');
-const auth = require('../middlewares/auth');
+const upload = require('../middlewares/multer');
 
 const router = Router();
 
-router.get('', [], GetKemitraan);
-router.post('', [auth], CreateKemitraan);
-router.put('/:id', [auth], UpdateKemitraan);
-router.delete('/:id', [auth], DeleteKemitraan);
+router.get('', [], GetAllKemitraan);
+router.get('/:id', [], GetKemitraanById);
+
+// Allow upload for 'logo' (image) and 'file' (PDF) fields
+router.post(
+  '',
+  upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'file', maxCount: 1 }]),
+  CreateNewKemitraan
+);
+router.put(
+  '/:id',
+  upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'file', maxCount: 1 }]),
+  UpdateKemitraanById
+);
+router.delete('/:id', [], DeleteKemitraanById);
 
 module.exports = router;
