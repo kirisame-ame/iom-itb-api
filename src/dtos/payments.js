@@ -198,7 +198,7 @@ class DonationDto {
     return {
       name: this.name,
       amount: Number(this.getGrossAmount() || 0).toLocaleString('id-ID'),
-      donationType: this.donationType,
+      donationType: this.getFormattedDonationType(),
       transactionId,
     };
   }
