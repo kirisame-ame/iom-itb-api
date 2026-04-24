@@ -9,19 +9,17 @@ const getKemitraan = async (query = {}) => {
     const page = parseInt(safeQuery.page) || 1;
     const limit = parseInt(safeQuery.limit) || 10;
     const search = safeQuery.search || '';
-    const { type, status } = safeQuery;
 
     const offset = (page - 1) * limit;
 
-    const whereClause = {};
-    if (search) {
-      whereClause[Op.or] = [
-        { name: { [Op.like]: `%${search}%` } },
-        { description: { [Op.like]: `%${search}%` } },
-      ];
-    }
-    if (type) whereClause.type = type;
-    if (status) whereClause.status = status;
+    const whereClause = search
+      ? {
+          [Op.or]: [
+            { name: { [Op.like]: `%${search}%` } },
+            { description: { [Op.like]: `%${search}%` } },
+          ],
+        }
+      : {};
 
     const { count, rows } = await Kemitraan.findAndCountAll({
       where: whereClause,

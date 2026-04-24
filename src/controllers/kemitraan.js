@@ -35,9 +35,9 @@ const GetKemitraanById = async (req, res) => {
 
 const GetAllKemitraan = async (req, res) => {
   try {
-    const { search, page, limit, type, status } = req.query;
+    const { search, page, limit } = req.query;
 
-    const result = await GetKemitraan({ search, page, limit, type, status });
+    const result = await GetKemitraan({ search, page, limit });
 
     res.status(StatusCodes.OK).json(new DataTable(result.data, result.total));
   } catch (error) {

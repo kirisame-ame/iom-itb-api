@@ -4,23 +4,13 @@ const BaseError = require('../../schemas/responses/BaseError');
 const fs = require('fs');
 const path = require('path');
 
-const MODEL_FIELDS = [
-  'name',
-  'type',
-  'description',
-  'contactName',
-  'contactEmail',
-  'contactPhone',
-  'website',
-  'startDate',
-  'endDate',
-  'status',
-  'options',
-];
-
 const createKemitraan = async (body, files, baseUrl) => {
-  const logoFile = files && files['logo'] ? files['logo'][0] : null;
-  const pdfFile = files && files['file'] ? files['file'][0] : null;
+  const imageFile = files && files['logo'] ? files['logo'][0]
+    : files && files['image'] ? files['image'][0]
+    : null;
+  const mouFile = files && files['file'] ? files['file'][0]
+    : files && files['mou'] ? files['mou'][0]
+    : null;
 
   try {
     if (!body || !body.name) {
@@ -31,36 +21,35 @@ const createKemitraan = async (body, files, baseUrl) => {
     }
 
     const uploadDir = path.resolve(__dirname, '../../uploads');
-    if ((logoFile || pdfFile) && !fs.existsSync(uploadDir)) {
+    if ((imageFile || mouFile) && !fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
 
-    let logoUrl = typeof body.logo === 'string' ? body.logo : null;
-    if (logoFile) {
-      const dest = path.join(uploadDir, logoFile.filename);
-      if (logoFile.path !== dest) fs.renameSync(logoFile.path, dest);
-      logoUrl = `${baseUrl}/uploads/${logoFile.filename}`;
+    let imageUrl = typeof body.image === 'string' ? body.image : null;
+    if (imageFile) {
+      const dest = path.join(uploadDir, imageFile.filename);
+      if (imageFile.path !== dest) fs.renameSync(imageFile.path, dest);
+      imageUrl = `${baseUrl}/uploads/${imageFile.filename}`;
     }
 
-    let fileUrl = typeof body.file === 'string' ? body.file : null;
-    if (pdfFile) {
-      const dest = path.join(uploadDir, pdfFile.filename);
-      if (pdfFile.path !== dest) fs.renameSync(pdfFile.path, dest);
-      fileUrl = `${baseUrl}/uploads/${pdfFile.filename}`;
+    let mouUrl = typeof body.mou === 'string' ? body.mou : null;
+    if (mouFile) {
+      const dest = path.join(uploadDir, mouFile.filename);
+      if (mouFile.path !== dest) fs.renameSync(mouFile.path, dest);
+      mouUrl = `${baseUrl}/uploads/${mouFile.filename}`;
     }
 
-    const payload = {};
-    for (const key of MODEL_FIELDS) {
-      if (body[key] !== undefined && body[key] !== '') payload[key] = body[key];
-    }
-    payload.logo = logoUrl;
-    payload.file = fileUrl;
+    const newKemitraan = await Kemitraan.create({
+      name: body.name,
+      description: body.description || null,
+      image: imageUrl,
+      mou: mouUrl,
+    });
 
-    const newKemitraan = await Kemitraan.create(payload);
     return newKemitraan;
   } catch (error) {
-    if (logoFile && fs.existsSync(logoFile.path)) fs.unlinkSync(logoFile.path);
-    if (pdfFile && fs.existsSync(pdfFile.path)) fs.unlinkSync(pdfFile.path);
+    if (imageFile && fs.existsSync(imageFile.path)) fs.unlinkSync(imageFile.path);
+    if (mouFile && fs.existsSync(mouFile.path)) fs.unlinkSync(mouFile.path);
 
     throw new BaseError({
       status: error.status || StatusCodes.INTERNAL_SERVER_ERROR,
