@@ -46,7 +46,7 @@ const cancelPayment = async (orderId) => {
 
   const current = PaymentNotificationDto.fromMidtransRaw(currentStatus);
 
-  if (current.paymentStatus === 'settlement') {
+  if (current.transactionStatus === 'settlement') {
     return {
       result: {
         message: 'Settled transaction cannot be canceled.',

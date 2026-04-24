@@ -97,6 +97,7 @@ const notifyTransactionPaid = async (trx, transactionId) => {
 const processDonationPayment = async (notification) => {
   let donationDto = null;
   let currentState = 'updated';
+  let shouldNotifyPaid = false;
 
   await sequelize.transaction(async (transaction) => {
     const donation = await Donations.findOne({
@@ -109,11 +110,7 @@ const processDonationPayment = async (notification) => {
       currentState = 'not_found';
       return;
     }
-
-    if (donation.paymentStatus === 'settlement') {
-      currentState = 'already_settled';
-      return;
-    }
+    const previousPaymentStatus = donation.paymentStatus;
 
     assertAmountMatches(notification.orderId, donation.grossAmount, notification.grossAmount);
 
@@ -134,12 +131,12 @@ const processDonationPayment = async (notification) => {
 
     await donation.update(updates, { transaction });
     donationDto = DonationDto.fromModel(donation);
+    shouldNotifyPaid = notification.isPaid && previousPaymentStatus !== 'settlement';
   });
 
   if (currentState === 'not_found') return { message: 'Donation not found', paymentStatus: notification.paymentStatus };
-  if (currentState === 'already_settled') return { message: 'Payment already settled', paymentStatus: 'settlement' };
 
-  if (notification.isPaid && donationDto) {
+  if (shouldNotifyPaid && donationDto) {
     await notifyDonationPaid(donationDto, notification.transactionId);
     return { message: 'Payment processed', paymentStatus: notification.paymentStatus };
   }
@@ -154,6 +151,7 @@ const processDonationPayment = async (notification) => {
 const processTransactionPayment = async (notification) => {
   let transactionDto = null;
   let currentState = 'updated';
+  let shouldNotifyPaid = false;
 
   await sequelize.transaction(async (transaction) => {
     const trx = await Transactions.findOne({
@@ -167,11 +165,7 @@ const processTransactionPayment = async (notification) => {
       currentState = 'not_found';
       return;
     }
-
-    if (trx.paymentStatus === 'settlement') {
-      currentState = 'already_settled';
-      return;
-    }
+    const previousPaymentStatus = trx.paymentStatus;
 
     assertAmountMatches(notification.orderId, trx.grossAmount, notification.grossAmount);
 
@@ -201,12 +195,12 @@ const processTransactionPayment = async (notification) => {
 
     await trx.update(updates, { transaction });
     transactionDto = TransactionDto.fromModel(trx);
+    shouldNotifyPaid = notification.isPaid && previousPaymentStatus !== 'settlement';
   });
 
   if (currentState === 'not_found') return { message: 'Transaction not found', paymentStatus: notification.paymentStatus };
-  if (currentState === 'already_settled') return { message: 'Payment already settled', paymentStatus: 'settlement' };
 
-  if (notification.isPaid && transactionDto) {
+  if (shouldNotifyPaid && transactionDto) {
     await notifyTransactionPaid(transactionDto, notification.transactionId);
     return { message: 'Payment processed', paymentStatus: notification.paymentStatus };
   }
