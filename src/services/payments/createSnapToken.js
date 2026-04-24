@@ -31,10 +31,16 @@ const createDonationSnapToken = async (payload) => {
         isHambaAllah: isHambaAllah || false,
       },
       bank: 'Midtrans',
+      paymentMethod: 'midtrans',
+      paymentStatus: 'pending',
+      grossAmount: Math.round(amount),
     }, { transaction: tx });
 
     const orderId = `DONATION-${Date.now()}-${donation.id}`;
-    await donation.update({ midtrans_order_id: orderId }, { transaction: tx });
+    await donation.update(
+      { midtrans_order_id: orderId, midtransOrderId: orderId },
+      { transaction: tx }
+    );
     await tx.commit();
 
     const parameter = {
@@ -85,6 +91,8 @@ const createTransactionSnapToken = async (payload) => {
     throw new BaseError({ status: StatusCodes.NOT_FOUND, message: 'Merchandise not found' });
   }
 
+  const grossAmount = Math.round(merchandise.price * qty);
+
   let newTransaction;
   const tx = await sequelize.transaction();
   try {
@@ -97,13 +105,17 @@ const createTransactionSnapToken = async (payload) => {
       qty,
       payment: null,
       status: 'waiting',
+      paymentMethod: 'midtrans',
+      paymentStatus: 'pending',
+      grossAmount,
     }, { transaction: tx });
 
     const code = `IOM-${Date.now()}-${newTransaction.id}`;
-    await newTransaction.update({ code }, { transaction: tx });
+    await newTransaction.update(
+      { code, midtransOrderId: code },
+      { transaction: tx }
+    );
     await tx.commit();
-
-    const grossAmount = Math.round(merchandise.price * qty);
     const parameter = {
       transaction_details: {
         order_id: code,

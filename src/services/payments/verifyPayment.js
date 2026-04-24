@@ -52,11 +52,16 @@ const verifyPayment = async (orderId) => {
     const donation = await Donations.findOne({ where: { midtrans_order_id: orderId } });
     if (!donation) return { message: 'Donation not found' };
 
-    if (donation.proof && donation.proof.startsWith('midtrans:')) {
+    if (donation.paymentStatus === 'settlement') {
       return { message: 'Already processed' };
     }
 
-    await donation.update({ proof: `midtrans:${transaction_id}`, date: new Date() });
+    await donation.update({
+      proof: `midtrans:${transaction_id}`,
+      date: new Date(),
+      paymentStatus: 'settlement',
+      midtransTransactionId: transaction_id,
+    });
 
     const amount = Number(gross_amount).toLocaleString('id-ID');
     const donationType = donation.options?.donationType || null;
@@ -78,17 +83,25 @@ const verifyPayment = async (orderId) => {
   }
 
   if (orderId.startsWith('IOM-')) {
-    const transaction = await Transactions.findOne({ where: { code: orderId }, include: [Merchandises] });
+    const transaction = await Transactions.findOne({
+      where: { code: orderId },
+      include: [{ model: Merchandises, as: 'merchandises' }],
+    });
     if (!transaction) return { message: 'Transaction not found' };
 
-    if (transaction.payment && transaction.payment.startsWith('midtrans:')) {
+    if (transaction.paymentStatus === 'settlement') {
       return { message: 'Already processed' };
     }
 
-    await transaction.update({ status: 'on process', payment: `midtrans:${transaction_id}` });
+    await transaction.update({
+      status: 'on process',
+      payment: `midtrans:${transaction_id}`,
+      paymentStatus: 'settlement',
+      midtransTransactionId: transaction_id,
+    });
 
     const amount = Number(gross_amount).toLocaleString('id-ID');
-    const merchandiseName = transaction.Merchandise?.name || 'Merchandise';
+    const merchandiseName = transaction.merchandises?.name || 'Merchandise';
 
     if (transaction.noTelp) {
       const message = `Halo ${transaction.username}!\n\nPembayaran pesanan Anda telah berhasil!\n\nKode Pesanan: ${transaction.code}\nProduk: ${merchandiseName} x ${transaction.qty}\nTotal: Rp ${amount}\n\nPesanan Anda sedang diproses.\n\nSalam,\nIOM ITB`;
