@@ -9,7 +9,7 @@ const GetPaymentStatus = async (orderId) => {
 
   if (orderId.startsWith('DONATION-')) {
     const donation = await Donations.findOne({
-      where: { midtrans_order_id: orderId },
+      where: { midtransOrderId: orderId },
     });
     if (!donation) {
       throw new BaseError({ status: StatusCodes.NOT_FOUND, message: 'Donation not found' });

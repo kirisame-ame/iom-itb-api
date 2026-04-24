@@ -3,6 +3,7 @@ const { Donations, Transactions, Merchandises, sequelize } = require('../../mode
 const { coreApi } = require('../../utils/midtrans');
 const sendWhatsApp = require('../../utils/whatsapp');
 const { restoreMerchandiseStock } = require('./stockHelper');
+const logPaymentEvent = require('./logPaymentEvent');
 
 const mapPaymentStatus = (transaction_status, fraud_status) => {
   if (transaction_status === 'settlement') return 'settlement';
@@ -25,12 +26,34 @@ const verifySignature = (body) => {
   return expected === signature_key;
 };
 
-const handleMidtransNotification = async (body) => {
-  if (!verifySignature(body)) {
+const handleMidtransNotification = async (body, { ipAddress } = {}) => {
+  const signatureValid = verifySignature(body);
+  if (!signatureValid) {
+    await logPaymentEvent({
+      source: 'notification',
+      payload: body,
+      signatureValid: false,
+      processed: false,
+      error: 'Invalid signature',
+      ipAddress,
+    });
     return { status: 401, message: 'Invalid signature' };
   }
 
-  const notification = await coreApi.transaction.notification(body);
+  let notification;
+  try {
+    notification = await coreApi.transaction.notification(body);
+  } catch (err) {
+    await logPaymentEvent({
+      source: 'notification',
+      payload: body,
+      signatureValid: true,
+      processed: false,
+      error: `coreApi.notification failed: ${err.message}`,
+      ipAddress,
+    });
+    throw err;
+  }
   const {
     order_id,
     transaction_status,
@@ -48,38 +71,38 @@ const handleMidtransNotification = async (body) => {
   const vaNumber = Array.isArray(va_numbers) && va_numbers[0] ? va_numbers[0].va_number : null;
   const paidAt = isPaid ? (settlement_time ? new Date(settlement_time) : new Date()) : null;
 
-  if (order_id.startsWith('DONATION-')) {
-    return processDonation({
-      order_id,
+  let result;
+  let processError = null;
+  try {
+    if (order_id.startsWith('DONATION-')) {
+      result = await processDonation({
+        order_id, paymentStatus, isPaid, gross_amount, transaction_id,
+        payment_type, vaNumber, fraud_status, paidAt, notification,
+      });
+    } else if (order_id.startsWith('IOM-')) {
+      result = await processTransaction({
+        order_id, paymentStatus, isPaid, isFailed, gross_amount, transaction_id,
+        payment_type, vaNumber, fraud_status, paidAt, notification,
+      });
+    } else {
+      result = { message: 'Unknown order type' };
+    }
+  } catch (err) {
+    processError = err.message;
+    throw err;
+  } finally {
+    await logPaymentEvent({
+      source: 'notification',
+      payload: notification,
       paymentStatus,
-      isPaid,
-      gross_amount,
-      transaction_id,
-      payment_type,
-      vaNumber,
-      fraud_status,
-      paidAt,
-      notification,
+      signatureValid: true,
+      processed: !processError,
+      error: processError,
+      ipAddress,
     });
   }
 
-  if (order_id.startsWith('IOM-')) {
-    return processTransaction({
-      order_id,
-      paymentStatus,
-      isPaid,
-      isFailed,
-      gross_amount,
-      transaction_id,
-      payment_type,
-      vaNumber,
-      fraud_status,
-      paidAt,
-      notification,
-    });
-  }
-
-  return { message: 'Unknown order type' };
+  return result;
 };
 
 const processDonation = async ({
@@ -91,7 +114,7 @@ const processDonation = async ({
 
   await sequelize.transaction(async (t) => {
     const donation = await Donations.findOne({
-      where: { midtrans_order_id: order_id },
+      where: { midtransOrderId: order_id },
       lock: t.LOCK.UPDATE,
       transaction: t,
     });

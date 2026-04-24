@@ -3,6 +3,7 @@ const { Donations, Transactions, Merchandises, sequelize } = require('../../mode
 const sendWhatsApp = require('../../utils/whatsapp');
 const sendEmail = require('../../utils/mailer');
 const { restoreMerchandiseStock } = require('./stockHelper');
+const logPaymentEvent = require('./logPaymentEvent');
 
 const donationEmailHtml = ({ name, amount, donationType, transactionId }) => `
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;border:1px solid #e5e7eb;border-radius:8px;">
@@ -47,7 +48,7 @@ const mapPaymentStatus = (transaction_status, fraud_status) => {
   return 'pending';
 };
 
-const verifyPayment = async (orderId) => {
+const verifyPayment = async (orderId, { ipAddress } = {}) => {
   if (!orderId) throw new Error('orderId is required');
 
   const statusResponse = await coreApi.transaction.status(orderId);
@@ -74,7 +75,7 @@ const verifyPayment = async (orderId) => {
 
     await sequelize.transaction(async (t) => {
       const donation = await Donations.findOne({
-        where: { midtrans_order_id: orderId },
+        where: { midtransOrderId: orderId },
         lock: t.LOCK.UPDATE,
         transaction: t,
       });
@@ -233,4 +234,24 @@ const verifyPayment = async (orderId) => {
   return { message: 'Unknown order type' };
 };
 
-module.exports = verifyPayment;
+const verifyPaymentWithLogging = async (orderId, opts = {}) => {
+  let result;
+  let error = null;
+  try {
+    result = await verifyPayment(orderId, opts);
+    return result;
+  } catch (err) {
+    error = err.message;
+    throw err;
+  } finally {
+    await logPaymentEvent({
+      source: 'verify',
+      payload: { order_id: orderId },
+      processed: !error,
+      error,
+      ipAddress: opts.ipAddress,
+    });
+  }
+};
+
+module.exports = verifyPaymentWithLogging;

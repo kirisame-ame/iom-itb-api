@@ -60,10 +60,7 @@ const createDonationSnapToken = async (payload) => {
     }, { transaction: tx });
 
     const orderId = `DONATION-${Date.now()}-${donation.id}`;
-    await donation.update(
-      { midtrans_order_id: orderId, midtransOrderId: orderId },
-      { transaction: tx }
-    );
+    await donation.update({ midtransOrderId: orderId }, { transaction: tx });
     await tx.commit();
 
     const parameter = {
