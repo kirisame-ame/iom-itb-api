@@ -8,11 +8,39 @@ const PAYMENT_SESSION_STATES = {
   UNCHANGED: 'unchanged',
 };
 
+const toSearchableText = (value) => {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  try {
+    return JSON.stringify(value);
+  } catch (_) {
+    return String(value);
+  }
+};
+
 const isMidtransNotFoundError = (error) => {
-  const responseBody = error?.ApiResponse || error?.message || '';
-  return error?.httpStatusCode === 404
-    || String(responseBody).includes('requested resource is not found')
-    || String(responseBody).includes("Transaction doesn't exist");
+  const httpStatusCode = Number(
+    error?.httpStatusCode
+    || error?.statusCode
+    || error?.status
+    || error?.ApiResponse?.status_code
+    || error?.rawHttpClientData?.status
+    || 0
+  );
+  const errorText = [
+    toSearchableText(error?.message),
+    toSearchableText(error?.ApiResponse),
+    toSearchableText(error?.rawHttpClientData),
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  return httpStatusCode === 404
+    || errorText.includes('"status_code":"404"')
+    || errorText.includes('"status_code":404')
+    || errorText.includes('HTTP status code: 404')
+    || errorText.includes('requested resource is not found')
+    || errorText.includes("Transaction doesn't exist");
 };
 
 const getMidtransStatusOrNull = async (coreApi, orderId) => {
