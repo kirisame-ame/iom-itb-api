@@ -2,18 +2,26 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.addColumn('Faculties', 'kodeUnik', {
-      type: Sequelize.STRING(3),
-      allowNull: true,
-    });
-    await queryInterface.addColumn('Faculties', 'isActive', {
-      type: Sequelize.BOOLEAN,
-      allowNull: false,
-      defaultValue: true,
-    });
+    const table = await queryInterface.describeTable('Faculties');
+
+    if (!table.kodeUnik) {
+      await queryInterface.addColumn('Faculties', 'kodeUnik', {
+        type: Sequelize.STRING(3),
+        allowNull: true,
+      });
+    }
+
+    if (!table.isActive) {
+      await queryInterface.addColumn('Faculties', 'isActive', {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
+      });
+    }
   },
   down: async (queryInterface) => {
-    await queryInterface.removeColumn('Faculties', 'kodeUnik');
-    await queryInterface.removeColumn('Faculties', 'isActive');
+    const table = await queryInterface.describeTable('Faculties');
+    if (table.kodeUnik) await queryInterface.removeColumn('Faculties', 'kodeUnik');
+    if (table.isActive) await queryInterface.removeColumn('Faculties', 'isActive');
   },
 };
