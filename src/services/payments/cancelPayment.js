@@ -6,10 +6,10 @@ const {
   PAYMENT_SESSION_STATES,
   getMidtransStatusOrNull,
   getPaymentSessionState,
-  waitForMidtransStatus,
 } = require('./midtransGatewayState');
 
 const TERMINAL_STATUSES = new Set(['failed', 'expired', 'refunded']);
+const CANCELLABLE_TRANSACTION_STATUSES = new Set(['pending', 'capture', 'authorize']);
 
 const syncMidtransStatus = async (statusResponse) => {
   const paymentDto = PaymentNotificationDto.fromMidtransRaw(statusResponse);
@@ -70,11 +70,7 @@ const cancelPayment = async (orderId) => {
     };
   }
 
-  if (current.transactionStatus === 'pending') {
-    await coreApi.transaction.expire(orderId);
-  } else if (current.transactionStatus === 'capture') {
-    await coreApi.transaction.cancel(orderId);
-  } else {
+  if (!CANCELLABLE_TRANSACTION_STATUSES.has(current.transactionStatus)) {
     return {
       result: {
         message: `Transaction with status ${current.transactionStatus || current.paymentStatus} cannot be canceled.`,
@@ -87,40 +83,8 @@ const cancelPayment = async (orderId) => {
     };
   }
 
-  const expectedStatuses = current.transactionStatus === 'pending'
-    ? new Set(['expire'])
-    : new Set(['cancel']);
-  const refreshedStatus = await waitForMidtransStatus(coreApi, orderId, {
-    attempts: 6,
-    delayMs: 1000,
-    accept: (status) => {
-      const transactionStatus = status?.transaction_status;
-      const paymentStatus = PaymentNotificationDto.mapPaymentStatus(
-        transactionStatus,
-        status?.fraud_status
-      );
-
-      return expectedStatuses.has(transactionStatus)
-        || paymentStatus === 'settlement'
-        || paymentStatus === 'failed'
-        || paymentStatus === 'expired'
-        || paymentStatus === 'refunded';
-    },
-  });
-
-  if (!refreshedStatus) {
-    return {
-      result: {
-        message: 'Payment session has not been started in Midtrans.',
-        paymentStatus: null,
-        paymentSessionState: PAYMENT_SESSION_STATES.NOT_STARTED,
-      },
-      payload: { order_id: orderId },
-      paymentStatus: null,
-      transactionStatus: null,
-    };
-  }
-  const synced = await syncMidtransStatus(refreshedStatus);
+  const cancelResponse = await coreApi.transaction.cancel(orderId);
+  const synced = await syncMidtransStatus(cancelResponse);
 
   return {
     ...synced,

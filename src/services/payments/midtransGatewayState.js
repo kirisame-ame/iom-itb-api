@@ -8,8 +8,6 @@ const PAYMENT_SESSION_STATES = {
   UNCHANGED: 'unchanged',
 };
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
 const toSearchableText = (value) => {
   if (!value) return '';
   if (typeof value === 'string') return value;
@@ -56,32 +54,6 @@ const getMidtransStatusOrNull = async (coreApi, orderId) => {
   }
 };
 
-const waitForMidtransStatus = async (coreApi, orderId, options = {}) => {
-  const {
-    attempts = 5,
-    delayMs = 800,
-    accept = () => true,
-  } = options;
-
-  let lastStatus = null;
-
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    const status = await getMidtransStatusOrNull(coreApi, orderId);
-    if (status) {
-      lastStatus = status;
-      if (accept(status)) {
-        return status;
-      }
-    }
-
-    if (attempt < attempts - 1) {
-      await sleep(delayMs);
-    }
-  }
-
-  return lastStatus;
-};
-
 const getPaymentSessionState = ({ transactionStatus, paymentStatus } = {}) => {
   if (transactionStatus === 'pending') {
     return PAYMENT_SESSION_STATES.PENDING;
@@ -105,6 +77,5 @@ module.exports = {
   PAYMENT_SESSION_STATES,
   isMidtransNotFoundError,
   getMidtransStatusOrNull,
-  waitForMidtransStatus,
   getPaymentSessionState,
 };
