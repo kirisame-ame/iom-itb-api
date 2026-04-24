@@ -5,35 +5,41 @@ const BaseError = require('../../schemas/responses/BaseError');
 
 const getKemitraan = async (query = {}) => {
   try {
-    const page = parseInt(query.page) || 1;
-    const limit = parseInt(query.limit) || 5;
-    const search = query.search || '';
+    const safeQuery = query || {};
+    const page = parseInt(safeQuery.page) || 1;
+    const limit = parseInt(safeQuery.limit) || 10;
+    const search = safeQuery.search || '';
+    const { type, status } = safeQuery;
 
     const offset = (page - 1) * limit;
 
-    const whereClause = search ? {
-      [Op.or]: [
-        { name: { [Op.iLike]: `%${search}%` } },
-        { description: { [Op.iLike]: `%${search}%` } }
-      ]
-    } : {};
+    const whereClause = {};
+    if (search) {
+      whereClause[Op.or] = [
+        { name: { [Op.like]: `%${search}%` } },
+        { description: { [Op.like]: `%${search}%` } },
+      ];
+    }
+    if (type) whereClause.type = type;
+    if (status) whereClause.status = status;
 
     const { count, rows } = await Kemitraan.findAndCountAll({
       where: whereClause,
-      limit: limit,
-      offset: offset,
+      limit,
+      offset,
       order: [['createdAt', 'DESC']],
     });
 
     return {
       data: rows,
+      total: count,
       pagination: {
         totalEntries: count,
         totalPages: Math.ceil(count / limit),
         currentPage: page,
         start: count === 0 ? 0 : offset + 1,
-        end: offset + rows.length
-      }
+        end: offset + rows.length,
+      },
     };
   } catch (error) {
     throw new BaseError({

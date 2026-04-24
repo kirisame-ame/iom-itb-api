@@ -3,13 +3,14 @@ const BaseResponse = require('../schemas/responses/BaseResponse');
 const DataTable = require('../schemas/responses/DataTable');
 const CreateKemitraan = require('../services/kemitraan/createKemitraan');
 const GetKemitraan = require('../services/kemitraan/getKemitraan');
+const GetKemitraanByIdService = require('../services/kemitraan/getKemitraanById');
 const UpdateKemitraan = require('../services/kemitraan/updateKemitraan');
 const DeleteKemitraan = require('../services/kemitraan/deleteKemitraan');
 
 const GetKemitraanById = async (req, res) => {
   try {
     const { id } = req.params;
-    const kemitraan = await GetKemitraan(id);
+    const kemitraan = await GetKemitraanByIdService(id);
 
     if (!kemitraan) {
       return res.status(StatusCodes.NOT_FOUND).json(new BaseResponse({
@@ -36,9 +37,9 @@ const GetAllKemitraan = async (req, res) => {
   try {
     const { search, page, limit, type, status } = req.query;
 
-    const kemitraan = await GetKemitraan(null, { page, limit, type, status }, search);
+    const result = await GetKemitraan({ search, page, limit, type, status });
 
-    res.status(StatusCodes.OK).json(new DataTable(kemitraan.data, kemitraan.total));
+    res.status(StatusCodes.OK).json(new DataTable(result.data, result.total));
   } catch (error) {
     const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
     res.status(status).json(new BaseResponse({
@@ -95,7 +96,7 @@ const DeleteKemitraanById = async (req, res) => {
     const result = await DeleteKemitraan(id);
     res.status(StatusCodes.OK).json(new BaseResponse({
       status: StatusCodes.OK,
-      message: result.message,
+      message: (result && result.message) || 'Kemitraan berhasil dihapus',
     }));
   } catch (error) {
     const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
