@@ -1,82 +1,66 @@
-const { Transactions, Merchandises, sequelize } = require('../../models');
+const { Transactions, sequelize } = require('../../models');
 const { StatusCodes } = require('http-status-codes');
 const BaseError = require('../../schemas/responses/BaseError');
+const { restoreMerchandiseStock } = require('../payments/stockHelper');
+
+const ALLOWED_STATUSES = ['waiting', 'on process', 'on delivery', 'arrived', 'done', 'canceled', 'denied'];
+const RELEASE_STATUSES = new Set(['canceled', 'denied']);
 
 const UpdateTransactions = async (id, body) => {
-  const transaction = await sequelize.transaction();
+  const { status } = body;
 
+  if (status === undefined) {
+    throw new BaseError({
+      status: StatusCodes.BAD_REQUEST,
+      message: 'Status must be provided for update',
+    });
+  }
+
+  if (!ALLOWED_STATUSES.includes(status)) {
+    throw new BaseError({
+      status: StatusCodes.BAD_REQUEST,
+      message: `Invalid status. Allowed: ${ALLOWED_STATUSES.join(', ')}`,
+    });
+  }
+
+  const tx = await sequelize.transaction();
   try {
-    const transactionRecord = await Transactions.findByPk(id, { transaction });
+    const record = await Transactions.findByPk(id, {
+      transaction: tx,
+      lock: tx.LOCK.UPDATE,
+    });
 
-    if (!transactionRecord) {
-      throw new BaseError({
-        status: StatusCodes.NOT_FOUND,
-        message: 'Transaction not found',
-      });
+    if (!record) {
+      throw new BaseError({ status: StatusCodes.NOT_FOUND, message: 'Transaction not found' });
     }
 
-    const { status } = body;
-    const { qty, merchandiseId } = transactionRecord;
-
-    if (status === undefined) {
-      throw new BaseError({
-        status: StatusCodes.BAD_REQUEST,
-        message: 'Status must be provided for update',
-      });
+    if (record.status === status) {
+      await tx.commit();
+      return { status: StatusCodes.OK, message: 'No change', data: record };
     }
 
-    // Check if the current status is "waiting"
-    if (transactionRecord.status === 'waiting' && !['waiting', 'canceled', 'denied'].includes(status)) {
-      // Find the merchandise associated with this transaction
-      const merchandise = await Merchandises.findByPk(merchandiseId);
+    const updates = { status };
 
-      if (!merchandise) {
-        throw new BaseError({
-          status: StatusCodes.NOT_FOUND,
-          message: 'Merchandise not found',
-        });
-      }
-
-      // Ensure there's enough stock
-      if (merchandise.stock < qty) {
-        throw new BaseError({
-          status: StatusCodes.BAD_REQUEST,
-          message: 'Not enough stock available',
-        });
-      }
-
-      // Decrease the stock
-      await Merchandises.update(
-        {
-          stock: merchandise.stock - qty,
-        },
-        {
-          where: { id: merchandiseId },
-          transaction,
-        }
+    const releasingStock = RELEASE_STATUSES.has(status) && record.stockDeducted;
+    if (releasingStock) {
+      await restoreMerchandiseStock(
+        { merchandiseId: record.merchandiseId, qty: record.qty },
+        tx
       );
+      updates.stockDeducted = false;
     }
 
-    // Update only the status of the transaction
-    await Transactions.update(
-      {
-        status: status || transactionRecord.status,
-      },
-      {
-        where: { id },
-        transaction,
-      }
-    );
-
-    await transaction.commit();
+    await record.update(updates, { transaction: tx });
+    await tx.commit();
 
     return {
       status: StatusCodes.OK,
-      message: 'Transaction status updated successfully, stock adjusted if necessary',
+      message: releasingStock
+        ? 'Transaction status updated, stock restored'
+        : 'Transaction status updated',
     };
   } catch (error) {
-    await transaction.rollback();
-
+    if (!tx.finished) await tx.rollback();
     throw new BaseError({
       status: error.status || StatusCodes.INTERNAL_SERVER_ERROR,
       message: `Failed to update transaction status: ${error.message || error}`,

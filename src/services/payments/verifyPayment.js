@@ -1,7 +1,8 @@
 const { coreApi } = require('../../utils/midtrans');
-const { Donations, Transactions, Merchandises } = require('../../models');
+const { Donations, Transactions, Merchandises, sequelize } = require('../../models');
 const sendWhatsApp = require('../../utils/whatsapp');
 const sendEmail = require('../../utils/mailer');
+const { restoreMerchandiseStock } = require('./stockHelper');
 
 const donationEmailHtml = ({ name, amount, donationType, transactionId }) => `
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;border:1px solid #e5e7eb;border-radius:8px;">
@@ -35,47 +36,103 @@ const transactionEmailHtml = ({ username, code, merchandiseName, qty, amount, tr
   <p style="color:#6b7280;font-size:13px;margin-top:24px;">Salam,<br><strong>IOM ITB</strong></p>
 </div>`;
 
+const mapPaymentStatus = (transaction_status, fraud_status) => {
+  if (transaction_status === 'settlement') return 'settlement';
+  if (transaction_status === 'capture') {
+    return fraud_status === 'accept' ? 'settlement' : 'pending';
+  }
+  if (transaction_status === 'expire') return 'expired';
+  if (transaction_status === 'cancel' || transaction_status === 'deny') return 'failed';
+  if (transaction_status === 'refund' || transaction_status === 'partial_refund') return 'refunded';
+  return 'pending';
+};
+
 const verifyPayment = async (orderId) => {
   if (!orderId) throw new Error('orderId is required');
 
   const statusResponse = await coreApi.transaction.status(orderId);
-  const { transaction_status, fraud_status, gross_amount, transaction_id } = statusResponse;
+  const {
+    transaction_status,
+    fraud_status,
+    gross_amount,
+    transaction_id,
+    payment_type,
+    va_numbers,
+    settlement_time,
+  } = statusResponse;
 
-  const isPaid = transaction_status === 'settlement' ||
-    (transaction_status === 'capture' && fraud_status === 'accept');
-
-  if (!isPaid) {
-    return { message: `Payment not confirmed yet. Status: ${transaction_status}` };
-  }
+  const paymentStatus = mapPaymentStatus(transaction_status, fraud_status);
+  const isPaid = paymentStatus === 'settlement';
+  const isFailed = paymentStatus === 'failed' || paymentStatus === 'expired';
+  const vaNumber = Array.isArray(va_numbers) && va_numbers[0] ? va_numbers[0].va_number : null;
+  const paidAt = isPaid ? (settlement_time ? new Date(settlement_time) : new Date()) : null;
 
   if (orderId.startsWith('DONATION-')) {
-    const donation = await Donations.findOne({ where: { midtrans_order_id: orderId } });
-    if (!donation) return { message: 'Donation not found' };
+    let donorCopy = null;
+    let wasPaid = false;
+    let currentStatus = paymentStatus;
 
-    if (donation.paymentStatus === 'settlement') {
-      return { message: 'Already processed' };
-    }
+    await sequelize.transaction(async (t) => {
+      const donation = await Donations.findOne({
+        where: { midtrans_order_id: orderId },
+        lock: t.LOCK.UPDATE,
+        transaction: t,
+      });
+      if (!donation) {
+        currentStatus = 'not_found';
+        return;
+      }
 
-    await donation.update({
-      proof: `midtrans:${transaction_id}`,
-      date: new Date(),
-      paymentStatus: 'settlement',
-      midtransTransactionId: transaction_id,
+      if (donation.paymentStatus === 'settlement') {
+        currentStatus = 'settlement';
+        return;
+      }
+
+      if (donation.grossAmount != null && Number(gross_amount) !== Number(donation.grossAmount)) {
+        throw new Error(`Amount mismatch for ${orderId}`);
+      }
+
+      const updates = {
+        paymentStatus,
+        midtransTransactionId: transaction_id,
+        paymentType: payment_type || donation.paymentType,
+        vaNumber: vaNumber || donation.vaNumber,
+        fraudStatus: fraud_status || donation.fraudStatus,
+        rawNotification: statusResponse,
+      };
+      if (isPaid) {
+        updates.proof = `midtrans:${transaction_id}`;
+        updates.date = paidAt;
+        updates.paidAt = paidAt;
+        wasPaid = true;
+      }
+
+      await donation.update(updates, { transaction: t });
+
+      donorCopy = {
+        name: donation.name,
+        email: donation.email,
+        noWhatsapp: donation.noWhatsapp,
+        notification: donation.notification,
+        donationType: donation.options?.donationType || null,
+        id: donation.id,
+      };
     });
 
-    const amount = Number(gross_amount).toLocaleString('id-ID');
-    const donationType = donation.options?.donationType || null;
+    if (currentStatus === 'not_found') return { message: 'Donation not found' };
+    if (!wasPaid) return { message: `Payment status: ${paymentStatus}` };
 
-    if (donation.noWhatsapp && Array.isArray(donation.notification) && donation.notification.includes('Whatsapp')) {
-      const message = `Halo ${donation.name}!\n\nPembayaran donasi Anda sebesar Rp ${amount} telah berhasil dikonfirmasi.\n\nTerima kasih atas kontribusi Anda kepada IOM ITB!\n\nSalam,\nIOM ITB`;
-      sendWhatsApp(donation.noWhatsapp, message, `donation-${donation.id}-paid`, `donation-${donation.id}`);
+    const amount = Number(gross_amount).toLocaleString('id-ID');
+    if (donorCopy.noWhatsapp && Array.isArray(donorCopy.notification) && donorCopy.notification.includes('Whatsapp')) {
+      const message = `Halo ${donorCopy.name}!\n\nPembayaran donasi Anda sebesar Rp ${amount} telah berhasil dikonfirmasi.\n\nTerima kasih atas kontribusi Anda kepada IOM ITB!\n\nSalam,\nIOM ITB`;
+      sendWhatsApp(donorCopy.noWhatsapp, message, `donation-${donorCopy.id}-paid`, `donation-${donorCopy.id}`);
     }
 
-    if (donation.email) {
+    if (donorCopy.email) {
       sendEmail({
-        to: donation.email,
+        to: donorCopy.email,
         subject: 'Konfirmasi Donasi IOM ITB',
-        html: donationEmailHtml({ name: donation.name, amount, donationType, transactionId: transaction_id }),
+        html: donationEmailHtml({ name: donorCopy.name, amount, donationType: donorCopy.donationType, transactionId: transaction_id }),
       });
     }
 
@@ -83,36 +140,90 @@ const verifyPayment = async (orderId) => {
   }
 
   if (orderId.startsWith('IOM-')) {
-    const transaction = await Transactions.findOne({
-      where: { code: orderId },
-      include: [{ model: Merchandises, as: 'merchandises' }],
-    });
-    if (!transaction) return { message: 'Transaction not found' };
+    let trxCopy = null;
+    let wasPaid = false;
+    let currentStatus = paymentStatus;
 
-    if (transaction.paymentStatus === 'settlement') {
-      return { message: 'Already processed' };
-    }
+    await sequelize.transaction(async (t) => {
+      const trx = await Transactions.findOne({
+        where: { code: orderId },
+        include: [{ model: Merchandises, as: 'merchandises' }],
+        lock: t.LOCK.UPDATE,
+        transaction: t,
+      });
+      if (!trx) {
+        currentStatus = 'not_found';
+        return;
+      }
 
-    await transaction.update({
-      status: 'on process',
-      payment: `midtrans:${transaction_id}`,
-      paymentStatus: 'settlement',
-      midtransTransactionId: transaction_id,
+      if (trx.paymentStatus === 'settlement') {
+        currentStatus = 'settlement';
+        return;
+      }
+
+      if (trx.grossAmount != null && Number(gross_amount) !== Number(trx.grossAmount)) {
+        throw new Error(`Amount mismatch for ${orderId}`);
+      }
+
+      const updates = {
+        paymentStatus,
+        midtransTransactionId: transaction_id,
+        paymentType: payment_type || trx.paymentType,
+        vaNumber: vaNumber || trx.vaNumber,
+        fraudStatus: fraud_status || trx.fraudStatus,
+        rawNotification: statusResponse,
+      };
+
+      if (isPaid) {
+        updates.status = 'on process';
+        updates.payment = `midtrans:${transaction_id}`;
+        updates.paidAt = paidAt;
+        wasPaid = true;
+      } else if (isFailed) {
+        updates.status = 'canceled';
+        if (trx.stockDeducted) {
+          await restoreMerchandiseStock(
+            { merchandiseId: trx.merchandiseId, qty: trx.qty },
+            t
+          );
+          updates.stockDeducted = false;
+        }
+      }
+
+      await trx.update(updates, { transaction: t });
+
+      trxCopy = {
+        username: trx.username,
+        email: trx.email,
+        noTelp: trx.noTelp,
+        code: trx.code,
+        qty: trx.qty,
+        id: trx.id,
+        merchandiseName: trx.merchandises?.name || 'Merchandise',
+      };
     });
+
+    if (currentStatus === 'not_found') return { message: 'Transaction not found' };
+    if (!wasPaid) return { message: `Payment status: ${paymentStatus}` };
 
     const amount = Number(gross_amount).toLocaleString('id-ID');
-    const merchandiseName = transaction.merchandises?.name || 'Merchandise';
-
-    if (transaction.noTelp) {
-      const message = `Halo ${transaction.username}!\n\nPembayaran pesanan Anda telah berhasil!\n\nKode Pesanan: ${transaction.code}\nProduk: ${merchandiseName} x ${transaction.qty}\nTotal: Rp ${amount}\n\nPesanan Anda sedang diproses.\n\nSalam,\nIOM ITB`;
-      sendWhatsApp(transaction.noTelp, message, `transaction-${transaction.id}-paid`, `transaction-${transaction.id}`);
+    if (trxCopy.noTelp) {
+      const message = `Halo ${trxCopy.username}!\n\nPembayaran pesanan Anda telah berhasil!\n\nKode Pesanan: ${trxCopy.code}\nProduk: ${trxCopy.merchandiseName} x ${trxCopy.qty}\nTotal: Rp ${amount}\n\nPesanan Anda sedang diproses.\n\nSalam,\nIOM ITB`;
+      sendWhatsApp(trxCopy.noTelp, message, `transaction-${trxCopy.id}-paid`, `transaction-${trxCopy.id}`);
     }
 
-    if (transaction.email) {
+    if (trxCopy.email) {
       sendEmail({
-        to: transaction.email,
+        to: trxCopy.email,
         subject: 'Konfirmasi Pesanan IOM ITB',
-        html: transactionEmailHtml({ username: transaction.username, code: transaction.code, merchandiseName, qty: transaction.qty, amount, transactionId: transaction_id }),
+        html: transactionEmailHtml({
+          username: trxCopy.username,
+          code: trxCopy.code,
+          merchandiseName: trxCopy.merchandiseName,
+          qty: trxCopy.qty,
+          amount,
+          transactionId: transaction_id,
+        }),
       });
     }
 

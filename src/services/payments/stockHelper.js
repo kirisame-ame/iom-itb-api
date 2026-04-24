@@ -3,7 +3,10 @@ const { Merchandises } = require('../../models');
 const BaseError = require('../../schemas/responses/BaseError');
 
 const decreaseMerchandiseStock = async ({ merchandiseId, qty }, transaction) => {
-  const merchandise = await Merchandises.findByPk(merchandiseId, { transaction });
+  const merchandise = await Merchandises.findByPk(merchandiseId, {
+    transaction,
+    lock: transaction ? transaction.LOCK.UPDATE : undefined,
+  });
   if (!merchandise) {
     throw new BaseError({ status: StatusCodes.NOT_FOUND, message: 'Merchandise not found' });
   }
@@ -16,4 +19,16 @@ const decreaseMerchandiseStock = async ({ merchandiseId, qty }, transaction) => 
   );
 };
 
-module.exports = { decreaseMerchandiseStock };
+const restoreMerchandiseStock = async ({ merchandiseId, qty }, transaction) => {
+  const merchandise = await Merchandises.findByPk(merchandiseId, {
+    transaction,
+    lock: transaction ? transaction.LOCK.UPDATE : undefined,
+  });
+  if (!merchandise) return;
+  await Merchandises.update(
+    { stock: merchandise.stock + qty },
+    { where: { id: merchandiseId }, transaction }
+  );
+};
+
+module.exports = { decreaseMerchandiseStock, restoreMerchandiseStock };

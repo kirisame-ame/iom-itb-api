@@ -1,26 +1,35 @@
 const { Transactions, Merchandises, sequelize } = require('../../models');
 const { StatusCodes } = require('http-status-codes');
 const BaseError = require('../../schemas/responses/BaseError');
+const { decreaseMerchandiseStock } = require('../payments/stockHelper');
 const fs = require('fs');
-const path = require('path'); // Ensure path is imported
+const path = require('path');
 
 const CreateTransaction = async (body, files, uploadPath) => {
-  // Start transaction
-  const transaction = await sequelize.transaction();
   const imageFile = files && files['payment'] ? files['payment'][0] : null;
+  const { merchandiseId, username, email, noTelp, address, qty } = body;
+
+  if (!merchandiseId || !username || !email || !noTelp || !address || qty == null) {
+    throw new BaseError({
+      status: StatusCodes.BAD_REQUEST,
+      message: 'Merchandise ID, username, email, noTelp, address, and qty are required fields',
+    });
+  }
+
+  const qtyNum = Number(qty);
+  if (!Number.isInteger(qtyNum) || qtyNum <= 0) {
+    throw new BaseError({
+      status: StatusCodes.BAD_REQUEST,
+      message: 'qty must be a positive integer',
+    });
+  }
+
+  const transaction = await sequelize.transaction();
   try {
-    // Validate required fields
-    const { merchandiseId, username, email, noTelp, address, qty } = body;
-
-    if (!merchandiseId || !username || !email || !noTelp || !address || qty == null) {
-      throw new BaseError({
-        status: StatusCodes.BAD_REQUEST,
-        message: 'Merchandise ID, username, email, noTelp, address, and qty are required fields',
-      });
-    }
-
-    // Validate if merchandise exists
-    const merchandise = await Merchandises.findByPk(merchandiseId);
+    const merchandise = await Merchandises.findByPk(merchandiseId, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
     if (!merchandise) {
       throw new BaseError({
         status: StatusCodes.NOT_FOUND,
@@ -28,12 +37,11 @@ const CreateTransaction = async (body, files, uploadPath) => {
       });
     }
 
-    // Handle image file for payment
+    await decreaseMerchandiseStock({ merchandiseId, qty: qtyNum }, transaction);
+
     const imageFileName = imageFile ? `${uploadPath}/public/images/transactions/${imageFile.filename}` : null;
+    const grossAmount = Number(merchandise.price) * qtyNum;
 
-    const grossAmount = Number(merchandise.price) * Number(qty);
-
-    // Create the transaction record within a transaction
     const newTransaction = await Transactions.create(
       {
         username,
@@ -41,36 +49,30 @@ const CreateTransaction = async (body, files, uploadPath) => {
         noTelp,
         address,
         merchandiseId,
-        qty,
-        payment: imageFileName, // Store the payment image path
-        status: 'waiting', // Default status
+        qty: qtyNum,
+        payment: imageFileName,
+        status: 'waiting',
         paymentMethod: 'manual',
         paymentStatus: 'pending',
         grossAmount,
+        stockDeducted: true,
       },
       { transaction }
     );
 
-    // Generate a transaction code after the transaction record is created
-    newTransaction.code = `IOM-${Date.now()}-${newTransaction.id}`; // Use the ID of the newly created transaction
-
-    // Save the updated transaction with the generated code
+    newTransaction.code = `IOM-${Date.now()}-${newTransaction.id}`;
     await newTransaction.save({ transaction });
 
-    // Commit the transaction
     await transaction.commit();
 
-    // Return the transaction code and other relevant information if needed
     return {
       code: newTransaction.code,
       message: 'Transaction created successfully',
-      transactionId: newTransaction.id // Optional: return transaction ID if needed
+      transactionId: newTransaction.id,
     };
   } catch (error) {
-    // Rollback the transaction in case of error
     await transaction.rollback();
 
-    // Clean up uploaded files if any errors occur
     if (files && imageFile) {
       const imageFilePath = path.join(__dirname, '../../public/images/transactions', imageFile.filename);
       if (fs.existsSync(imageFilePath)) {
@@ -78,7 +80,6 @@ const CreateTransaction = async (body, files, uploadPath) => {
       }
     }
 
-    // Re-throw the error for handling
     throw new BaseError({
       status: error.status || StatusCodes.INTERNAL_SERVER_ERROR,
       message: `Failed to create transaction: ${error.message || error}`,

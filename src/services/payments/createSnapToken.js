@@ -2,6 +2,24 @@ const { Donations, Transactions, Merchandises, sequelize } = require('../../mode
 const { StatusCodes } = require('http-status-codes');
 const BaseError = require('../../schemas/responses/BaseError');
 const { snap } = require('../../utils/midtrans');
+const { decreaseMerchandiseStock, restoreMerchandiseStock } = require('./stockHelper');
+
+const SNAP_EXPIRY_HOURS = 24;
+
+const formatMidtransStartTime = (date = new Date()) => {
+  const pad = (n) => String(n).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  const mm = pad(date.getMonth() + 1);
+  const dd = pad(date.getDate());
+  const hh = pad(date.getHours());
+  const mi = pad(date.getMinutes());
+  const ss = pad(date.getSeconds());
+  const offsetMin = -date.getTimezoneOffset();
+  const sign = offsetMin >= 0 ? '+' : '-';
+  const offH = pad(Math.floor(Math.abs(offsetMin) / 60));
+  const offM = pad(Math.abs(offsetMin) % 60);
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss} ${sign}${offH}${offM}`;
+};
 
 const createDonationSnapToken = async (payload) => {
   const { name, email, noWhatsapp, amount, donationType, facultyId, notification, nameIsHidden, isHambaAllah } = payload;
@@ -13,6 +31,11 @@ const createDonationSnapToken = async (payload) => {
     });
   }
 
+  const amountRounded = Math.round(Number(amount));
+  if (!Number.isFinite(amountRounded) || amountRounded <= 0) {
+    throw new BaseError({ status: StatusCodes.BAD_REQUEST, message: 'amount must be a positive number' });
+  }
+
   let donation;
   const tx = await sequelize.transaction();
   try {
@@ -21,7 +44,7 @@ const createDonationSnapToken = async (payload) => {
       email,
       noWhatsapp,
       notification: notification || [],
-      amount,
+      amount: amountRounded,
       nameIsHidden: nameIsHidden || false,
       isHambaAllah: isHambaAllah || false,
       options: {
@@ -33,7 +56,7 @@ const createDonationSnapToken = async (payload) => {
       bank: 'Midtrans',
       paymentMethod: 'midtrans',
       paymentStatus: 'pending',
-      grossAmount: Math.round(amount),
+      grossAmount: amountRounded,
     }, { transaction: tx });
 
     const orderId = `DONATION-${Date.now()}-${donation.id}`;
@@ -46,7 +69,7 @@ const createDonationSnapToken = async (payload) => {
     const parameter = {
       transaction_details: {
         order_id: orderId,
-        gross_amount: Math.round(amount),
+        gross_amount: amountRounded,
       },
       customer_details: {
         first_name: name,
@@ -55,10 +78,15 @@ const createDonationSnapToken = async (payload) => {
       },
       item_details: [{
         id: `donation-${donationType || 'umum'}`,
-        price: Math.round(amount),
+        price: amountRounded,
         quantity: 1,
         name: `Donasi IOM ITB${donationType ? ` — ${donationType}` : ''}`,
       }],
+      expiry: {
+        start_time: formatMidtransStartTime(),
+        unit: 'hours',
+        duration: SNAP_EXPIRY_HOURS,
+      },
       callbacks: {
         notification: `${process.env.BASE_URL}/payments/notification`,
       },
@@ -86,28 +114,48 @@ const createTransactionSnapToken = async (payload) => {
     });
   }
 
-  const merchandise = await Merchandises.findByPk(merchandiseId);
-  if (!merchandise) {
-    throw new BaseError({ status: StatusCodes.NOT_FOUND, message: 'Merchandise not found' });
+  const qtyNum = Number(qty);
+  if (!Number.isInteger(qtyNum) || qtyNum <= 0) {
+    throw new BaseError({ status: StatusCodes.BAD_REQUEST, message: 'qty must be a positive integer' });
   }
 
-  const grossAmount = Math.round(merchandise.price * qty);
-
   let newTransaction;
+  let grossAmount;
+  let merchandiseName;
+  let merchandisePrice;
+
   const tx = await sequelize.transaction();
   try {
+    const merchandise = await Merchandises.findByPk(merchandiseId, {
+      transaction: tx,
+      lock: tx.LOCK.UPDATE,
+    });
+    if (!merchandise) {
+      throw new BaseError({ status: StatusCodes.NOT_FOUND, message: 'Merchandise not found' });
+    }
+
+    await decreaseMerchandiseStock({ merchandiseId, qty: qtyNum }, tx);
+
+    merchandisePrice = Math.round(Number(merchandise.price));
+    merchandiseName = merchandise.name;
+    grossAmount = merchandisePrice * qtyNum;
+
+    const expiredAt = new Date(Date.now() + SNAP_EXPIRY_HOURS * 60 * 60 * 1000);
+
     newTransaction = await Transactions.create({
       username,
       email,
       noTelp,
       address,
       merchandiseId,
-      qty,
+      qty: qtyNum,
       payment: null,
       status: 'waiting',
       paymentMethod: 'midtrans',
       paymentStatus: 'pending',
       grossAmount,
+      expiredAt,
+      stockDeducted: true,
     }, { transaction: tx });
 
     const code = `IOM-${Date.now()}-${newTransaction.id}`;
@@ -116,6 +164,7 @@ const createTransactionSnapToken = async (payload) => {
       { transaction: tx }
     );
     await tx.commit();
+
     const parameter = {
       transaction_details: {
         order_id: code,
@@ -129,20 +178,39 @@ const createTransactionSnapToken = async (payload) => {
       },
       item_details: [{
         id: String(merchandiseId),
-        price: Math.round(merchandise.price),
-        quantity: qty,
-        name: merchandise.name,
+        price: merchandisePrice,
+        quantity: qtyNum,
+        name: merchandiseName,
       }],
+      expiry: {
+        start_time: formatMidtransStartTime(),
+        unit: 'hours',
+        duration: SNAP_EXPIRY_HOURS,
+      },
       callbacks: {
         notification: `${process.env.BASE_URL}/payments/notification`,
       },
     };
 
-    const snapToken = await snap.createTransaction(parameter);
-    return { token: snapToken.token, orderId: code, code };
+    try {
+      const snapToken = await snap.createTransaction(parameter);
+      return { token: snapToken.token, orderId: code, code };
+    } catch (snapError) {
+      const compensateTx = await sequelize.transaction();
+      try {
+        await restoreMerchandiseStock({ merchandiseId, qty: qtyNum }, compensateTx);
+        await newTransaction.update(
+          { stockDeducted: false, paymentStatus: 'failed', status: 'canceled' },
+          { transaction: compensateTx }
+        );
+        await compensateTx.commit();
+      } catch (compensateErr) {
+        if (!compensateTx.finished) await compensateTx.rollback();
+      }
+      throw snapError;
+    }
   } catch (error) {
     if (tx && !tx.finished) await tx.rollback();
-    if (newTransaction) await newTransaction.destroy().catch(() => {});
     throw new BaseError({
       status: error.status || StatusCodes.INTERNAL_SERVER_ERROR,
       message: `Failed to create transaction snap token: ${error.message}`,

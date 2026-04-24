@@ -28,7 +28,8 @@ const CreateSnapToken = async (req, res) => {
 const HandleNotification = async (req, res) => {
   try {
     const result = await handleMidtransNotification(req.body);
-    return res.status(StatusCodes.OK).json({ status: 200, ...result });
+    const httpStatus = result?.status && Number.isInteger(result.status) ? result.status : StatusCodes.OK;
+    return res.status(httpStatus).json({ status: httpStatus, ...result });
   } catch (error) {
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ status: 500, message: error.message });
   }
