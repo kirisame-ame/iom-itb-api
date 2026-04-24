@@ -2,6 +2,7 @@ const { StatusCodes } = require('http-status-codes');
 const { createDonationSnapToken, createTransactionSnapToken } = require('../services/payments/createSnapToken');
 const handleMidtransNotification = require('../services/payments/handleNotification');
 const verifyPayment = require('../services/payments/verifyPayment');
+const cancelPayment = require('../services/payments/cancelPayment');
 
 const CreateSnapToken = async (req, res) => {
   try {
@@ -47,4 +48,15 @@ const VerifyPayment = async (req, res) => {
   }
 };
 
-module.exports = { CreateSnapToken, HandleNotification, VerifyPayment };
+const CancelPayment = async (req, res) => {
+  try {
+    const { orderId } = req.body;
+    const ipAddress = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+    const result = await cancelPayment(orderId, { ipAddress });
+    return res.status(StatusCodes.OK).json({ status: 200, ...result });
+  } catch (error) {
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ status: 500, message: error.message });
+  }
+};
+
+module.exports = { CreateSnapToken, HandleNotification, VerifyPayment, CancelPayment };

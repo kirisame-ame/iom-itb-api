@@ -3,9 +3,10 @@ const { PaymentNotificationDto } = require('../../dtos/payments');
 const logPaymentEvent = require('./logPaymentEvent');
 const processPaymentUpdate = require('./processPaymentUpdate');
 
-const verifyPayment = async (orderId) => {
+const cancelPayment = async (orderId) => {
   if (!orderId) throw new Error('orderId is required');
 
+  await coreApi.transaction.cancel(orderId);
   const statusResponse = await coreApi.transaction.status(orderId);
   const paymentDto = PaymentNotificationDto.fromMidtransRaw(statusResponse);
   const result = await processPaymentUpdate(paymentDto);
@@ -17,27 +18,27 @@ const verifyPayment = async (orderId) => {
   };
 };
 
-const verifyPaymentWithLogging = async (orderId, opts = {}) => {
+const cancelPaymentWithLogging = async (orderId, opts = {}) => {
   let result;
   let error = null;
   let payload = { order_id: orderId };
   let paymentStatus = null;
 
   try {
-    const verification = await verifyPayment(orderId, opts);
+    const cancellation = await cancelPayment(orderId);
     result = {
-      ...verification.result,
-      paymentStatus: verification.result?.paymentStatus || verification.paymentStatus || null,
+      ...cancellation.result,
+      paymentStatus: cancellation.result?.paymentStatus || cancellation.paymentStatus || null,
     };
-    payload = verification.payload || payload;
-    paymentStatus = verification.paymentStatus || null;
+    payload = cancellation.payload || payload;
+    paymentStatus = cancellation.paymentStatus || null;
     return result;
   } catch (err) {
     error = err.message;
     throw err;
   } finally {
     await logPaymentEvent({
-      source: 'verify',
+      source: 'system',
       payload,
       paymentStatus,
       processed: !error,
@@ -47,4 +48,4 @@ const verifyPaymentWithLogging = async (orderId, opts = {}) => {
   }
 };
 
-module.exports = verifyPaymentWithLogging;
+module.exports = cancelPaymentWithLogging;

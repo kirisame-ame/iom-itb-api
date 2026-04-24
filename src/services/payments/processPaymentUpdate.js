@@ -92,7 +92,7 @@ const notifyTransactionPaid = async (trx, transactionId) => {
 
 /**
  * @param {import('../../dtos/payments').PaymentNotificationDto} notification
- * @returns {Promise<{ message: string }>}
+ * @returns {Promise<{ message: string, paymentStatus?: string }>}
  */
 const processDonationPayment = async (notification) => {
   let donationDto = null;
@@ -136,20 +136,20 @@ const processDonationPayment = async (notification) => {
     donationDto = DonationDto.fromModel(donation);
   });
 
-  if (currentState === 'not_found') return { message: 'Donation not found' };
-  if (currentState === 'already_settled') return { message: 'Payment already settled' };
+  if (currentState === 'not_found') return { message: 'Donation not found', paymentStatus: notification.paymentStatus };
+  if (currentState === 'already_settled') return { message: 'Payment already settled', paymentStatus: 'settlement' };
 
   if (notification.isPaid && donationDto) {
     await notifyDonationPaid(donationDto, notification.transactionId);
-    return { message: 'Payment processed' };
+    return { message: 'Payment processed', paymentStatus: notification.paymentStatus };
   }
 
-  return { message: `Payment status: ${notification.paymentStatus}` };
+  return { message: `Payment status: ${notification.paymentStatus}`, paymentStatus: notification.paymentStatus };
 };
 
 /**
  * @param {import('../../dtos/payments').PaymentNotificationDto} notification
- * @returns {Promise<{ message: string }>}
+ * @returns {Promise<{ message: string, paymentStatus?: string }>}
  */
 const processTransactionPayment = async (notification) => {
   let transactionDto = null;
@@ -203,20 +203,20 @@ const processTransactionPayment = async (notification) => {
     transactionDto = TransactionDto.fromModel(trx);
   });
 
-  if (currentState === 'not_found') return { message: 'Transaction not found' };
-  if (currentState === 'already_settled') return { message: 'Payment already settled' };
+  if (currentState === 'not_found') return { message: 'Transaction not found', paymentStatus: notification.paymentStatus };
+  if (currentState === 'already_settled') return { message: 'Payment already settled', paymentStatus: 'settlement' };
 
   if (notification.isPaid && transactionDto) {
     await notifyTransactionPaid(transactionDto, notification.transactionId);
-    return { message: 'Payment processed' };
+    return { message: 'Payment processed', paymentStatus: notification.paymentStatus };
   }
 
-  return { message: `Payment status: ${notification.paymentStatus}` };
+  return { message: `Payment status: ${notification.paymentStatus}`, paymentStatus: notification.paymentStatus };
 };
 
 /**
  * @param {import('../../dtos/payments').PaymentNotificationDto} notification
- * @returns {Promise<{ message: string }>}
+ * @returns {Promise<{ message: string, paymentStatus?: string }>}
  */
 const processPaymentUpdate = async (notification) => {
   if (notification.scope === 'donation') {
@@ -227,7 +227,7 @@ const processPaymentUpdate = async (notification) => {
     return processTransactionPayment(notification);
   }
 
-  return { message: 'Unknown order type' };
+  return { message: 'Unknown order type', paymentStatus: notification.paymentStatus };
 };
 
 module.exports = processPaymentUpdate;
