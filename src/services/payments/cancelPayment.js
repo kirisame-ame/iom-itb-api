@@ -6,6 +6,7 @@ const {
   PAYMENT_SESSION_STATES,
   getMidtransStatusOrNull,
   getPaymentSessionState,
+  waitForMidtransStatus,
 } = require('./midtransGatewayState');
 
 const TERMINAL_STATUSES = new Set(['failed', 'expired', 'refunded']);
@@ -86,7 +87,39 @@ const cancelPayment = async (orderId) => {
     };
   }
 
-  const refreshedStatus = await coreApi.transaction.status(orderId);
+  const expectedStatuses = current.transactionStatus === 'pending'
+    ? new Set(['expire'])
+    : new Set(['cancel']);
+  const refreshedStatus = await waitForMidtransStatus(coreApi, orderId, {
+    attempts: 6,
+    delayMs: 1000,
+    accept: (status) => {
+      const transactionStatus = status?.transaction_status;
+      const paymentStatus = PaymentNotificationDto.mapPaymentStatus(
+        transactionStatus,
+        status?.fraud_status
+      );
+
+      return expectedStatuses.has(transactionStatus)
+        || paymentStatus === 'settlement'
+        || paymentStatus === 'failed'
+        || paymentStatus === 'expired'
+        || paymentStatus === 'refunded';
+    },
+  });
+
+  if (!refreshedStatus) {
+    return {
+      result: {
+        message: 'Payment session has not been started in Midtrans.',
+        paymentStatus: null,
+        paymentSessionState: PAYMENT_SESSION_STATES.NOT_STARTED,
+      },
+      payload: { order_id: orderId },
+      paymentStatus: null,
+      transactionStatus: null,
+    };
+  }
   const synced = await syncMidtransStatus(refreshedStatus);
 
   return {
