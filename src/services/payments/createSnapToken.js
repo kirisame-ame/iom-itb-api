@@ -3,6 +3,7 @@ const { StatusCodes } = require('http-status-codes');
 const BaseError = require('../../schemas/responses/BaseError');
 const { snap } = require('../../utils/midtrans');
 const { decreaseMerchandiseStock, restoreMerchandiseStock } = require('./stockHelper');
+const { getDonationAmountBreakdown } = require('../donations/donationAmount');
 
 const SNAP_EXPIRY_HOURS = 24;
 
@@ -31,10 +32,7 @@ const createDonationSnapToken = async (payload) => {
     });
   }
 
-  const amountRounded = Math.round(Number(amount));
-  if (!Number.isFinite(amountRounded) || amountRounded <= 0) {
-    throw new BaseError({ status: StatusCodes.BAD_REQUEST, message: 'amount must be a positive number' });
-  }
+  const amountBreakdown = await getDonationAmountBreakdown({ amount, facultyId });
 
   let donation;
   const tx = await sequelize.transaction();
@@ -44,19 +42,20 @@ const createDonationSnapToken = async (payload) => {
       email,
       noWhatsapp,
       notification: notification || [],
-      amount: amountRounded,
-      nameIsHidden: nameIsHidden || false,
-      isHambaAllah: isHambaAllah || false,
+      amount: amountBreakdown.baseAmount,
       options: {
         donationType: donationType || null,
-        facultyId: facultyId || null,
+        facultyId: amountBreakdown.facultyId,
         nameIsHidden: nameIsHidden || false,
         isHambaAllah: isHambaAllah || false,
       },
+      donationType: donationType || null,
+      facultyId: amountBreakdown.facultyId,
+      kodeUnik: amountBreakdown.uniqueCode,
       bank: 'Midtrans',
       paymentMethod: 'midtrans',
       paymentStatus: 'pending',
-      grossAmount: amountRounded,
+      grossAmount: amountBreakdown.grossAmount,
     }, { transaction: tx });
 
     const orderId = `DONATION-${Date.now()}-${donation.id}`;
@@ -66,7 +65,7 @@ const createDonationSnapToken = async (payload) => {
     const parameter = {
       transaction_details: {
         order_id: orderId,
-        gross_amount: amountRounded,
+        gross_amount: amountBreakdown.grossAmount,
       },
       customer_details: {
         first_name: name,
@@ -75,9 +74,14 @@ const createDonationSnapToken = async (payload) => {
       },
       item_details: [{
         id: `donation-${donationType || 'umum'}`,
-        price: amountRounded,
+        price: amountBreakdown.baseAmount,
         quantity: 1,
         name: `Donasi IOM ITB${donationType ? ` — ${donationType}` : ''}`,
+      }, {
+        id: `faculty-unique-code-${amountBreakdown.facultyId}`,
+        price: amountBreakdown.uniqueCodeAmount,
+        quantity: 1,
+        name: `Kode Unik Fakultas ${amountBreakdown.facultyName}`,
       }],
       expiry: {
         start_time: formatMidtransStartTime(),
@@ -90,7 +94,14 @@ const createDonationSnapToken = async (payload) => {
     };
 
     const snapToken = await snap.createTransaction(parameter);
-    return { token: snapToken.token, orderId };
+    return {
+      token: snapToken.token,
+      orderId,
+      amount: amountBreakdown.baseAmount,
+      grossAmount: amountBreakdown.grossAmount,
+      uniqueCode: amountBreakdown.uniqueCode,
+      facultyName: amountBreakdown.facultyName,
+    };
   } catch (error) {
     if (tx && !tx.finished) await tx.rollback();
     if (donation) await donation.destroy().catch(() => {});
