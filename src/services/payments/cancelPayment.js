@@ -3,18 +3,107 @@ const { PaymentNotificationDto } = require('../../dtos/payments');
 const logPaymentEvent = require('./logPaymentEvent');
 const processPaymentUpdate = require('./processPaymentUpdate');
 
-const cancelPayment = async (orderId) => {
-  if (!orderId) throw new Error('orderId is required');
+const TERMINAL_STATUSES = new Set(['failed', 'expired', 'refunded']);
 
-  await coreApi.transaction.cancel(orderId);
-  const statusResponse = await coreApi.transaction.status(orderId);
+const getStatusOrNull = async (orderId) => {
+  try {
+    return await coreApi.transaction.status(orderId);
+  } catch (error) {
+    const responseBody = error?.ApiResponse || error?.message || '';
+    const isNotFound = error?.httpStatusCode === 404
+      || String(responseBody).includes('requested resource is not found')
+      || String(responseBody).includes("Transaction doesn't exist");
+
+    if (isNotFound) return null;
+    throw error;
+  }
+};
+
+const syncMidtransStatus = async (statusResponse) => {
   const paymentDto = PaymentNotificationDto.fromMidtransRaw(statusResponse);
   const result = await processPaymentUpdate(paymentDto);
 
   return {
-    result,
+    result: {
+      ...result,
+      paymentStatus: result?.paymentStatus || paymentDto.paymentStatus || null,
+    },
     payload: statusResponse,
     paymentStatus: paymentDto.paymentStatus,
+    transactionStatus: paymentDto.transactionStatus,
+  };
+};
+
+const cancelPayment = async (orderId) => {
+  if (!orderId) throw new Error('orderId is required');
+
+  const currentStatus = await getStatusOrNull(orderId);
+
+  if (!currentStatus) {
+    return {
+      result: {
+        message: 'Payment session has not been started in Midtrans.',
+        paymentStatus: null,
+        gatewayState: 'not_started',
+      },
+      payload: { order_id: orderId },
+      paymentStatus: null,
+      transactionStatus: null,
+    };
+  }
+
+  const current = PaymentNotificationDto.fromMidtransRaw(currentStatus);
+
+  if (current.paymentStatus === 'settlement') {
+    return {
+      result: {
+        message: 'Settled transaction cannot be canceled.',
+        paymentStatus: 'settlement',
+        gatewayState: 'settlement',
+      },
+      payload: currentStatus,
+      paymentStatus: current.paymentStatus,
+      transactionStatus: current.transactionStatus,
+    };
+  }
+
+  if (TERMINAL_STATUSES.has(current.paymentStatus) || current.transactionStatus === 'cancel') {
+    const synced = await syncMidtransStatus(currentStatus);
+    return {
+      ...synced,
+      result: {
+        ...synced.result,
+        gatewayState: 'terminal',
+      },
+    };
+  }
+
+  if (current.transactionStatus === 'pending') {
+    await coreApi.transaction.expire(orderId);
+  } else if (current.transactionStatus === 'capture') {
+    await coreApi.transaction.cancel(orderId);
+  } else {
+    return {
+      result: {
+        message: `Transaction with status ${current.transactionStatus || current.paymentStatus} cannot be canceled.`,
+        paymentStatus: current.paymentStatus,
+        gatewayState: 'unchanged',
+      },
+      payload: currentStatus,
+      paymentStatus: current.paymentStatus,
+      transactionStatus: current.transactionStatus,
+    };
+  }
+
+  const refreshedStatus = await coreApi.transaction.status(orderId);
+  const synced = await syncMidtransStatus(refreshedStatus);
+
+  return {
+    ...synced,
+    result: {
+      ...synced.result,
+      gatewayState: synced.transactionStatus === 'expire' ? 'expired' : 'canceled',
+    },
   };
 };
 
@@ -26,10 +115,7 @@ const cancelPaymentWithLogging = async (orderId, opts = {}) => {
 
   try {
     const cancellation = await cancelPayment(orderId);
-    result = {
-      ...cancellation.result,
-      paymentStatus: cancellation.result?.paymentStatus || cancellation.paymentStatus || null,
-    };
+    result = cancellation.result;
     payload = cancellation.payload || payload;
     paymentStatus = cancellation.paymentStatus || null;
     return result;
