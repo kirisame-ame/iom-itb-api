@@ -1,54 +1,46 @@
 const { Kemitraan } = require('../../models');
 const { Op } = require('sequelize');
+const { StatusCodes } = require('http-status-codes');
+const BaseError = require('../../schemas/responses/BaseError');
 
-const GetKemitraan = async (id = null, query = {}, search = '') => {
-  if (id) {
-    try {
-      const kemitraan = await Kemitraan.findByPk(id);
-      if (!kemitraan) {
-        throw new Error(`Kemitraan with id ${id} not found`);
-      }
-      return kemitraan;
-    } catch (error) {
-      throw new Error(`Failed to retrieve kemitraan data: ${error.message}`);
-    }
-  }
-
-  const page = query.page || 1;
-  const limit = query.limit || 10;
-  const offset = (page - 1) * limit;
-
-  const options = {
-    where: {},
-    limit,
-    offset,
-    order: [['createdAt', 'DESC']],
-  };
-
-  if (search) {
-    options.where.name = { [Op.like]: `%${search}%` };
-  }
-
-  if (query.type) {
-    options.where.type = query.type;
-  }
-
-  if (query.status) {
-    options.where.status = query.status;
-  }
-
+const getKemitraan = async (query = {}) => {
   try {
-    const { rows, count } = await Kemitraan.findAndCountAll(options);
+    const page = parseInt(query.page) || 1;
+    const limit = parseInt(query.limit) || 5;
+    const search = query.search || '';
+
+    const offset = (page - 1) * limit;
+
+    const whereClause = search ? {
+      [Op.or]: [
+        { name: { [Op.iLike]: `%${search}%` } },
+        { description: { [Op.iLike]: `%${search}%` } }
+      ]
+    } : {};
+
+    const { count, rows } = await Kemitraan.findAndCountAll({
+      where: whereClause,
+      limit: limit,
+      offset: offset,
+      order: [['createdAt', 'DESC']],
+    });
 
     return {
       data: rows,
-      total: count,
-      currentPage: page,
-      totalPages: Math.ceil(count / limit),
+      pagination: {
+        totalEntries: count,
+        totalPages: Math.ceil(count / limit),
+        currentPage: page,
+        start: count === 0 ? 0 : offset + 1,
+        end: offset + rows.length
+      }
     };
   } catch (error) {
-    throw new Error(`Failed to retrieve kemitraan data: ${error.message}`);
+    throw new BaseError({
+      status: error.status || StatusCodes.INTERNAL_SERVER_ERROR,
+      message: `Failed to fetch kemitraan: ${error.message || error}`,
+    });
   }
 };
 
-module.exports = GetKemitraan;
+module.exports = getKemitraan;

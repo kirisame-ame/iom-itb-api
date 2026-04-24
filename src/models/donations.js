@@ -58,7 +58,11 @@ module.exports = (sequelize, DataTypes) => {
     options: {
       type: DataTypes.JSON,  // Menyimpan data tambahan dalam bentuk JSON
       allowNull: true
-    },    
+    },
+    midtrans_order_id: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
     date: {
       type: DataTypes.DATE,
       allowNull: true

@@ -18,8 +18,9 @@ const fileRouter = require('./file');
 const CompetitionRouter = require('./competition');
 const DanaBantuan = require('./danaBantuan');
 const KemitraanRouter = require('./kemitraan');
-const FacultyRouter = require('./faculties');
-const PaymentRouter = require('./payments');
+const kegiatanKemitraanRouter = require('./kegiatanKemitraan');
+const PaymentsRouter = require('./payments');
+const FacultiesRouter = require('./faculties');
 const TallyWebhookRouter = require('./tallyWebhooks');
 const TallySubmissionsRouter = require('./tallySubmissions');
 
@@ -46,8 +47,9 @@ router.use('/file', fileRouter);
 router.use('/competition', CompetitionRouter);
 router.use('/dana-bantuan', DanaBantuan);
 router.use('/kemitraan', KemitraanRouter);
-router.use('/faculties', FacultyRouter);
-router.use('/payments', PaymentRouter);
+router.use('/kegiatan-kemitraan', kegiatanKemitraanRouter);
+router.use('/payments', PaymentsRouter);
+router.use('/faculties', FacultiesRouter);
 router.use('/webhooks/tally', TallyWebhookRouter);
 router.use('/tally-submissions', TallySubmissionsRouter);
 

@@ -1,19 +1,11 @@
 const { Router } = require('express');
-const {
-  GetAllFaculties,
-  GetFacultyById,
-  CreateNewFaculty,
-  UpdateFacultyById,
-  DeleteFacultyById,
-} = require('../controllers/faculties');
-const JWTValidation = require('../middlewares/auth');
+const { Faculties } = require('../models');
 
 const router = Router();
 
-router.get('', [], GetAllFaculties);
-router.get('/:id', [], GetFacultyById);
-router.post('', JWTValidation, CreateNewFaculty);
-router.put('/:id', JWTValidation, UpdateFacultyById);
-router.delete('/:id', JWTValidation, DeleteFacultyById);
+router.get('', async (req, res) => {
+  const faculties = await Faculties.findAll({ order: [['name', 'ASC']] });
+  return res.json({ status: 200, data: faculties });
+});
 
 module.exports = router;

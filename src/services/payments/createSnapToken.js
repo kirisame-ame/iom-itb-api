@@ -1,90 +1,82 @@
+const { Donations, Transactions, Merchandises, sequelize } = require('../../models');
 const { StatusCodes } = require('http-status-codes');
-const { Donations, Transactions, Merchandises, Faculties, sequelize } = require('../../models');
 const BaseError = require('../../schemas/responses/BaseError');
-const { snap } = require('../../config/midtrans');
+const { snap } = require('../../utils/midtrans');
 
-const DONATION_TYPES = [
-  'iuran_sukarela',
-  'kontribusi_anggota',
-  'kontribusi_donatur',
-  'pembelian_merchandise',
-  'kontribusi_sukarela',
-];
+const createDonationSnapToken = async (payload) => {
+  const { name, email, noWhatsapp, amount, donationType, facultyId, notification, nameIsHidden, isHambaAllah } = payload;
 
-const makeOrderId = (prefix, id) => `${prefix}-${id}-${Date.now()}`;
-
-const buildFinishUrl = () => {
-  const base = process.env.MIDTRANS_FINISH_REDIRECT_URL || process.env.WEB_APP_URL;
-  return base ? `${base.replace(/\/$/, '')}/transaksi` : undefined;
-};
-
-const createDonationDraft = async (payload) => {
-  const {
-    name, email, noWhatsapp, notification,
-    donationType, facultyId, options = {},
-  } = payload;
-
-  if (!name || !email || !noWhatsapp || !notification) {
+  if (!name || !email || !noWhatsapp || !amount) {
     throw new BaseError({
       status: StatusCodes.BAD_REQUEST,
-      message: 'name, email, noWhatsapp, notification are required',
-    });
-  }
-  if (!DONATION_TYPES.includes(donationType)) {
-    throw new BaseError({
-      status: StatusCodes.BAD_REQUEST,
-      message: 'Invalid donationType',
-    });
-  }
-  const amount = Number(payload.amount);
-  if (!amount || amount <= 0) {
-    throw new BaseError({
-      status: StatusCodes.BAD_REQUEST,
-      message: 'amount must be > 0',
+      message: 'name, email, noWhatsapp, and amount are required',
     });
   }
 
-  let faculty = null;
-  if (facultyId) {
-    faculty = await Faculties.findByPk(facultyId);
-    if (!faculty) {
-      throw new BaseError({ status: StatusCodes.NOT_FOUND, message: 'Faculty not found' });
-    }
-  }
-
-  const t = await sequelize.transaction();
+  let donation;
+  const tx = await sequelize.transaction();
   try {
-    const donation = await Donations.create({
-      name, email, noWhatsapp, notification,
+    donation = await Donations.create({
+      name,
+      email,
+      noWhatsapp,
+      notification: notification || [],
       amount,
-      grossAmount: amount,
-      donationType,
-      facultyId: faculty ? faculty.id : null,
-      kodeUnik: faculty ? faculty.kodeUnik : null,
-      paymentMethod: 'midtrans',
-      paymentStatus: 'pending',
-      options,
-      date: new Date(),
-    }, { transaction: t });
+      nameIsHidden: nameIsHidden || false,
+      isHambaAllah: isHambaAllah || false,
+      options: {
+        donationType: donationType || null,
+        facultyId: facultyId || null,
+        nameIsHidden: nameIsHidden || false,
+        isHambaAllah: isHambaAllah || false,
+      },
+      bank: 'Midtrans',
+    }, { transaction: tx });
 
-    donation.midtransOrderId = makeOrderId('DON', donation.id);
-    await donation.save({ transaction: t });
+    const orderId = `DONATION-${Date.now()}-${donation.id}`;
+    await donation.update({ midtrans_order_id: orderId }, { transaction: tx });
+    await tx.commit();
 
-    await t.commit();
-    return { donation, faculty };
+    const parameter = {
+      transaction_details: {
+        order_id: orderId,
+        gross_amount: Math.round(amount),
+      },
+      customer_details: {
+        first_name: name,
+        email,
+        phone: noWhatsapp,
+      },
+      item_details: [{
+        id: `donation-${donationType || 'umum'}`,
+        price: Math.round(amount),
+        quantity: 1,
+        name: `Donasi IOM ITB${donationType ? ` — ${donationType}` : ''}`,
+      }],
+      callbacks: {
+        notification: `${process.env.BASE_URL}/payments/notification`,
+      },
+    };
+
+    const snapToken = await snap.createTransaction(parameter);
+    return { token: snapToken.token, orderId };
   } catch (error) {
-    await t.rollback();
-    throw error;
+    if (tx && !tx.finished) await tx.rollback();
+    if (donation) await donation.destroy().catch(() => {});
+    throw new BaseError({
+      status: error.status || StatusCodes.INTERNAL_SERVER_ERROR,
+      message: `Failed to create donation snap token: ${error.message}`,
+    });
   }
 };
 
-const createTransactionDraft = async (payload) => {
+const createTransactionSnapToken = async (payload) => {
   const { merchandiseId, username, email, noTelp, address, qty } = payload;
 
-  if (!merchandiseId || !username || !email || !noTelp || !address || !qty) {
+  if (!merchandiseId || !username || !email || !noTelp || !address || qty == null) {
     throw new BaseError({
       status: StatusCodes.BAD_REQUEST,
-      message: 'merchandiseId, username, email, noTelp, address, qty are required',
+      message: 'merchandiseId, username, email, noTelp, address, and qty are required',
     });
   }
 
@@ -92,105 +84,58 @@ const createTransactionDraft = async (payload) => {
   if (!merchandise) {
     throw new BaseError({ status: StatusCodes.NOT_FOUND, message: 'Merchandise not found' });
   }
-  if (merchandise.stock < qty) {
-    throw new BaseError({ status: StatusCodes.BAD_REQUEST, message: 'Not enough stock available' });
-  }
 
-  const grossAmount = Number(merchandise.price) * Number(qty);
-
-  const t = await sequelize.transaction();
+  let newTransaction;
+  const tx = await sequelize.transaction();
   try {
-    const trx = await Transactions.create({
-      merchandiseId, username, email, noTelp, address, qty,
+    newTransaction = await Transactions.create({
+      username,
+      email,
+      noTelp,
+      address,
+      merchandiseId,
+      qty,
+      payment: null,
       status: 'waiting',
-      payment: 'midtrans',
-      paymentMethod: 'midtrans',
-      paymentStatus: 'pending',
-      grossAmount,
-    }, { transaction: t });
+    }, { transaction: tx });
 
-    trx.code = `IOM-${Date.now()}-${trx.id}`;
-    trx.midtransOrderId = makeOrderId('TRX', trx.id);
-    await trx.save({ transaction: t });
+    const code = `IOM-${Date.now()}-${newTransaction.id}`;
+    await newTransaction.update({ code }, { transaction: tx });
+    await tx.commit();
 
-    await t.commit();
-    return { transaction: trx, merchandise };
-  } catch (error) {
-    await t.rollback();
-    throw error;
-  }
-};
-
-const CreateSnapToken = async ({ type, payload }) => {
-  if (type !== 'donation' && type !== 'transaction') {
-    throw new BaseError({
-      status: StatusCodes.BAD_REQUEST,
-      message: 'type must be "donation" or "transaction"',
-    });
-  }
-
-  const finishUrl = buildFinishUrl();
-
-  if (type === 'donation') {
-    const { donation, faculty } = await createDonationDraft(payload);
-    const itemName = `Donasi ${payload.donationType}${faculty ? ` (${faculty.name})` : ''}`;
-
-    const snapResp = await snap.createTransaction({
+    const grossAmount = Math.round(merchandise.price * qty);
+    const parameter = {
       transaction_details: {
-        order_id: donation.midtransOrderId,
-        gross_amount: Number(donation.grossAmount),
+        order_id: code,
+        gross_amount: grossAmount,
+      },
+      customer_details: {
+        first_name: username,
+        email,
+        phone: noTelp,
+        shipping_address: { address },
       },
       item_details: [{
-        id: `donation-${donation.id}`,
-        name: itemName.slice(0, 50),
-        quantity: 1,
-        price: Number(donation.grossAmount),
+        id: String(merchandiseId),
+        price: Math.round(merchandise.price),
+        quantity: qty,
+        name: merchandise.name,
       }],
-      customer_details: {
-        first_name: donation.name,
-        email: donation.email,
-        phone: donation.noWhatsapp,
+      callbacks: {
+        notification: `${process.env.BASE_URL}/payments/notification`,
       },
-      callbacks: finishUrl ? { finish: finishUrl } : undefined,
-    });
-
-    return {
-      token: snapResp.token,
-      redirectUrl: snapResp.redirect_url,
-      orderId: donation.midtransOrderId,
-      recordId: donation.id,
     };
+
+    const snapToken = await snap.createTransaction(parameter);
+    return { token: snapToken.token, orderId: code, code };
+  } catch (error) {
+    if (tx && !tx.finished) await tx.rollback();
+    if (newTransaction) await newTransaction.destroy().catch(() => {});
+    throw new BaseError({
+      status: error.status || StatusCodes.INTERNAL_SERVER_ERROR,
+      message: `Failed to create transaction snap token: ${error.message}`,
+    });
   }
-
-  const { transaction: trx, merchandise } = await createTransactionDraft(payload);
-
-  const snapResp = await snap.createTransaction({
-    transaction_details: {
-      order_id: trx.midtransOrderId,
-      gross_amount: Number(trx.grossAmount),
-    },
-    item_details: [{
-      id: `merch-${merchandise.id}`,
-      name: merchandise.name.slice(0, 50),
-      quantity: Number(trx.qty),
-      price: Number(merchandise.price),
-    }],
-    customer_details: {
-      first_name: trx.username,
-      email: trx.email,
-      phone: trx.noTelp,
-      shipping_address: { address: trx.address },
-    },
-    callbacks: finishUrl ? { finish: finishUrl } : undefined,
-  });
-
-  return {
-    token: snapResp.token,
-    redirectUrl: snapResp.redirect_url,
-    orderId: trx.midtransOrderId,
-    code: trx.code,
-    recordId: trx.id,
-  };
 };
 
-module.exports = CreateSnapToken;
+module.exports = { createDonationSnapToken, createTransactionSnapToken };

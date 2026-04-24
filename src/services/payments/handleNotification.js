@@ -1,134 +1,69 @@
-const { StatusCodes } = require('http-status-codes');
-const { Donations, Transactions, sequelize } = require('../../models');
-const BaseError = require('../../schemas/responses/BaseError');
-const { coreApi } = require('../../config/midtrans');
-const { decreaseMerchandiseStock } = require('./stockHelper');
-const { sendTransactionInvoice, sendDonationInvoice } = require('./sendInvoiceEmail');
+const { Donations, Transactions, Merchandises } = require('../../models');
+const { coreApi } = require('../../utils/midtrans');
+const sendWhatsApp = require('../../utils/whatsapp');
 
-const fireInvoice = (sendFn, record, kind) => {
-  Promise.resolve()
-    .then(() => sendFn(record))
-    // eslint-disable-next-line no-console
-    .then(() => console.log(`[invoice] ${kind} invoice sent for ${record.midtransOrderId || record.id}`))
-    // eslint-disable-next-line no-console
-    .catch((err) => console.error(`[invoice] failed to send ${kind} invoice:`, err.message));
+const handleMidtransNotification = async (body) => {
+  const notification = await coreApi.transaction.notification(body);
+
+  const { order_id, transaction_status, fraud_status, gross_amount } = notification;
+  const isPaid = transaction_status === 'settlement' ||
+    (transaction_status === 'capture' && fraud_status === 'accept');
+  const isFailed = ['cancel', 'deny', 'expire'].includes(transaction_status);
+
+  if (order_id.startsWith('DONATION-')) {
+    const donation = await Donations.findOne({ where: { midtrans_order_id: order_id } });
+    if (!donation) return { message: 'Donation not found' };
+
+    if (isPaid) {
+      if (donation.proof && donation.proof.startsWith('midtrans:')) {
+        return { message: 'Already processed' };
+      }
+      await donation.update({
+        proof: `midtrans:${notification.transaction_id}`,
+        date: new Date(),
+      });
+
+      if (donation.noWhatsapp && Array.isArray(donation.notification) && donation.notification.includes('Whatsapp')) {
+        const amount = Number(gross_amount).toLocaleString('id-ID');
+        const message = `Halo ${donation.name}!\n\nPembayaran donasi Anda sebesar Rp ${amount} telah berhasil dikonfirmasi.\n\nTerima kasih atas kontribusi Anda kepada IOM ITB!\n\nSalam,\nIOM ITB`;
+        sendWhatsApp(
+          donation.noWhatsapp,
+          message,
+          `donation-${donation.id}-paid`,
+          `donation-${donation.id}`
+        );
+      }
+    }
+  } else if (order_id.startsWith('IOM-')) {
+    const transaction = await Transactions.findOne({ where: { code: order_id }, include: [Merchandises] });
+    if (!transaction) return { message: 'Transaction not found' };
+
+    if (isPaid) {
+      if (transaction.payment && transaction.payment.startsWith('midtrans:')) {
+        return { message: 'Already processed' };
+      }
+      await transaction.update({
+        status: 'on process',
+        payment: `midtrans:${notification.transaction_id}`,
+      });
+
+      if (transaction.noTelp) {
+        const amount = Number(gross_amount).toLocaleString('id-ID');
+        const merchandiseName = transaction.Merchandise?.name || 'Merchandise';
+        const message = `Halo ${transaction.username}!\n\nPembayaran pesanan Anda telah berhasil!\n\nKode Pesanan: ${transaction.code}\nProduk: ${merchandiseName} x ${transaction.qty}\nTotal: Rp ${amount}\n\nPesanan Anda sedang diproses.\n\nSalam,\nIOM ITB`;
+        sendWhatsApp(
+          transaction.noTelp,
+          message,
+          `transaction-${transaction.id}-paid`,
+          `transaction-${transaction.id}`
+        );
+      }
+    } else if (isFailed) {
+      await transaction.update({ status: 'canceled' });
+    }
+  }
+
+  return { message: 'Notification handled' };
 };
 
-const mapStatus = (statusResponse) => {
-  const { transaction_status: trxStatus, fraud_status: fraudStatus } = statusResponse;
-  if (trxStatus === 'capture') {
-    if (fraudStatus === 'accept') return 'settlement';
-    if (fraudStatus === 'challenge') return 'pending';
-    return 'failed';
-  }
-  if (trxStatus === 'settlement') return 'settlement';
-  if (trxStatus === 'pending') return 'pending';
-  if (trxStatus === 'deny' || trxStatus === 'cancel' || trxStatus === 'failure') return 'failed';
-  if (trxStatus === 'expire') return 'expired';
-  if (trxStatus === 'refund' || trxStatus === 'partial_refund') return 'refunded';
-  return 'pending';
-};
-
-const FINAL_STATUSES = new Set(['settlement', 'refunded', 'expired', 'failed']);
-
-const HandleMidtransNotification = async (body) => {
-  const statusResponse = await coreApi.transaction.notification(body);
-  const orderId = statusResponse.order_id;
-  const newStatus = mapStatus(statusResponse);
-  const midtransTransactionId = statusResponse.transaction_id;
-
-  if (!orderId) {
-    throw new BaseError({ status: StatusCodes.BAD_REQUEST, message: 'order_id missing' });
-  }
-
-  if (orderId.startsWith('DON-')) {
-    return updateDonation(orderId, newStatus, midtransTransactionId);
-  }
-  if (orderId.startsWith('TRX-')) {
-    return updateTransaction(orderId, newStatus, midtransTransactionId);
-  }
-
-  throw new BaseError({ status: StatusCodes.BAD_REQUEST, message: `Unknown order_id prefix: ${orderId}` });
-};
-
-const updateDonation = async (orderId, newStatus, midtransTransactionId) => {
-  const t = await sequelize.transaction();
-  try {
-    const donation = await Donations.findOne({ where: { midtransOrderId: orderId }, transaction: t });
-    if (!donation) {
-      await t.rollback();
-      throw new BaseError({ status: StatusCodes.NOT_FOUND, message: 'Donation not found for order_id' });
-    }
-
-    if (FINAL_STATUSES.has(donation.paymentStatus) && donation.paymentStatus !== 'settlement') {
-      await t.rollback();
-      return { orderId, newStatus: donation.paymentStatus, changed: false };
-    }
-    if (donation.paymentStatus === newStatus) {
-      await t.rollback();
-      return { orderId, newStatus, changed: false };
-    }
-
-    const previousDonationStatus = donation.paymentStatus;
-    donation.paymentStatus = newStatus;
-    donation.midtransTransactionId = midtransTransactionId || donation.midtransTransactionId;
-    if (newStatus === 'settlement' && !donation.date) {
-      donation.date = new Date();
-    }
-    await donation.save({ transaction: t });
-
-    await t.commit();
-
-    if (newStatus === 'settlement' && previousDonationStatus !== 'settlement') {
-      fireInvoice(sendDonationInvoice, donation, 'donation');
-    }
-
-    return { orderId, newStatus, changed: true, scope: 'donation' };
-  } catch (error) {
-    if (t && !t.finished) await t.rollback();
-    throw error;
-  }
-};
-
-const updateTransaction = async (orderId, newStatus, midtransTransactionId) => {
-  const t = await sequelize.transaction();
-  try {
-    const trx = await Transactions.findOne({ where: { midtransOrderId: orderId }, transaction: t });
-    if (!trx) {
-      await t.rollback();
-      throw new BaseError({ status: StatusCodes.NOT_FOUND, message: 'Transaction not found for order_id' });
-    }
-
-    if (FINAL_STATUSES.has(trx.paymentStatus) && trx.paymentStatus !== 'settlement') {
-      await t.rollback();
-      return { orderId, newStatus: trx.paymentStatus, changed: false };
-    }
-    if (trx.paymentStatus === newStatus) {
-      await t.rollback();
-      return { orderId, newStatus, changed: false };
-    }
-
-    const previousStatus = trx.paymentStatus;
-    trx.paymentStatus = newStatus;
-    trx.midtransTransactionId = midtransTransactionId || trx.midtransTransactionId;
-
-    if (newStatus === 'settlement' && previousStatus !== 'settlement' && trx.status === 'waiting') {
-      await decreaseMerchandiseStock({ merchandiseId: trx.merchandiseId, qty: trx.qty }, t);
-      trx.status = 'on process';
-    }
-
-    await trx.save({ transaction: t });
-    await t.commit();
-
-    if (newStatus === 'settlement' && previousStatus !== 'settlement') {
-      fireInvoice(sendTransactionInvoice, trx, 'transaction');
-    }
-
-    return { orderId, newStatus, changed: true, scope: 'transaction' };
-  } catch (error) {
-    if (t && !t.finished) await t.rollback();
-    throw error;
-  }
-};
-
-module.exports = HandleMidtransNotification;
+module.exports = handleMidtransNotification;
