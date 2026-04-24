@@ -2,22 +2,13 @@ const { coreApi } = require('../../utils/midtrans');
 const { PaymentNotificationDto } = require('../../dtos/payments');
 const logPaymentEvent = require('./logPaymentEvent');
 const processPaymentUpdate = require('./processPaymentUpdate');
+const {
+  PAYMENT_SESSION_STATES,
+  getMidtransStatusOrNull,
+  getPaymentSessionState,
+} = require('./midtransGatewayState');
 
 const TERMINAL_STATUSES = new Set(['failed', 'expired', 'refunded']);
-
-const getStatusOrNull = async (orderId) => {
-  try {
-    return await coreApi.transaction.status(orderId);
-  } catch (error) {
-    const responseBody = error?.ApiResponse || error?.message || '';
-    const isNotFound = error?.httpStatusCode === 404
-      || String(responseBody).includes('requested resource is not found')
-      || String(responseBody).includes("Transaction doesn't exist");
-
-    if (isNotFound) return null;
-    throw error;
-  }
-};
 
 const syncMidtransStatus = async (statusResponse) => {
   const paymentDto = PaymentNotificationDto.fromMidtransRaw(statusResponse);
@@ -37,14 +28,14 @@ const syncMidtransStatus = async (statusResponse) => {
 const cancelPayment = async (orderId) => {
   if (!orderId) throw new Error('orderId is required');
 
-  const currentStatus = await getStatusOrNull(orderId);
+  const currentStatus = await getMidtransStatusOrNull(coreApi, orderId);
 
   if (!currentStatus) {
     return {
       result: {
         message: 'Payment session has not been started in Midtrans.',
         paymentStatus: null,
-        gatewayState: 'not_started',
+        paymentSessionState: PAYMENT_SESSION_STATES.NOT_STARTED,
       },
       payload: { order_id: orderId },
       paymentStatus: null,
@@ -59,7 +50,7 @@ const cancelPayment = async (orderId) => {
       result: {
         message: 'Settled transaction cannot be canceled.',
         paymentStatus: 'settlement',
-        gatewayState: 'settlement',
+        paymentSessionState: PAYMENT_SESSION_STATES.SETTLEMENT,
       },
       payload: currentStatus,
       paymentStatus: current.paymentStatus,
@@ -73,7 +64,7 @@ const cancelPayment = async (orderId) => {
       ...synced,
       result: {
         ...synced.result,
-        gatewayState: 'terminal',
+        paymentSessionState: getPaymentSessionState(synced),
       },
     };
   }
@@ -87,7 +78,7 @@ const cancelPayment = async (orderId) => {
       result: {
         message: `Transaction with status ${current.transactionStatus || current.paymentStatus} cannot be canceled.`,
         paymentStatus: current.paymentStatus,
-        gatewayState: 'unchanged',
+        paymentSessionState: PAYMENT_SESSION_STATES.UNCHANGED,
       },
       payload: currentStatus,
       paymentStatus: current.paymentStatus,
@@ -102,7 +93,7 @@ const cancelPayment = async (orderId) => {
     ...synced,
     result: {
       ...synced.result,
-      gatewayState: synced.transactionStatus === 'expire' ? 'expired' : 'canceled',
+      paymentSessionState: getPaymentSessionState(synced),
     },
   };
 };

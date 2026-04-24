@@ -2,16 +2,36 @@ const { coreApi } = require('../../utils/midtrans');
 const { PaymentNotificationDto } = require('../../dtos/payments');
 const logPaymentEvent = require('./logPaymentEvent');
 const processPaymentUpdate = require('./processPaymentUpdate');
+const {
+  PAYMENT_SESSION_STATES,
+  getMidtransStatusOrNull,
+  getPaymentSessionState,
+} = require('./midtransGatewayState');
 
 const verifyPayment = async (orderId) => {
   if (!orderId) throw new Error('orderId is required');
 
-  const statusResponse = await coreApi.transaction.status(orderId);
+  const statusResponse = await getMidtransStatusOrNull(coreApi, orderId);
+  if (!statusResponse) {
+    return {
+      result: {
+        message: 'Payment session has not been started in Midtrans.',
+        paymentStatus: null,
+        paymentSessionState: PAYMENT_SESSION_STATES.NOT_STARTED,
+      },
+      payload: { order_id: orderId },
+      paymentStatus: null,
+    };
+  }
+
   const paymentDto = PaymentNotificationDto.fromMidtransRaw(statusResponse);
   const result = await processPaymentUpdate(paymentDto);
 
   return {
-    result,
+    result: {
+      ...result,
+      paymentSessionState: getPaymentSessionState(paymentDto),
+    },
     payload: statusResponse,
     paymentStatus: paymentDto.paymentStatus,
   };
