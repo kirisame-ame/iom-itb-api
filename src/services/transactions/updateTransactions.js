@@ -1,10 +1,56 @@
-const { Transactions, sequelize } = require('../../models');
+const { Transactions, Merchandises, sequelize } = require('../../models');
 const { StatusCodes } = require('http-status-codes');
 const BaseError = require('../../schemas/responses/BaseError');
 const { restoreMerchandiseStock } = require('../payments/stockHelper');
+const sendEmail = require('../../utils/mailer');
+const sendWhatsApp = require('../../utils/whatsapp');
+const {
+  buildTransactionShippingStatusEmail,
+  SHIPPING_STATUS_COPY,
+} = require('../payments/templates/paymentConfirmation');
 
 const ALLOWED_STATUSES = ['waiting', 'on process', 'on delivery', 'arrived', 'done', 'canceled', 'denied'];
 const RELEASE_STATUSES = new Set(['canceled', 'denied']);
+const NOTIFY_STATUSES = new Set(['on process', 'on delivery', 'arrived', 'done', 'canceled', 'denied']);
+
+const notifyShippingStatusUpdate = async (trx, status, merchandiseName) => {
+  const copy = SHIPPING_STATUS_COPY[status] || { headline: `Status pesanan diperbarui menjadi: ${status}`, body: '' };
+  const tasks = [];
+
+  if (trx.noTelp) {
+    const message = `Halo ${trx.username}!\n\n${copy.headline}\n\nKode Pesanan: ${trx.code}\nProduk: ${merchandiseName} x ${trx.qty}\nStatus: ${status}\n\n${copy.body}\n\nSalam,\nIOM ITB`;
+    tasks.push(
+      sendWhatsApp(
+        trx.noTelp,
+        message,
+        `transaction-${trx.id}-status-${status}`,
+        `transaction-${trx.id}`
+      )
+    );
+  }
+
+  if (trx.email) {
+    const email = buildTransactionShippingStatusEmail({
+      username: trx.username,
+      code: trx.code,
+      merchandiseName,
+      qty: trx.qty,
+      address: trx.address,
+      status,
+      transactionId: trx.id,
+    });
+    tasks.push(
+      sendEmail({
+        to: trx.email,
+        subject: email.subject,
+        html: email.html,
+        attachments: email.attachments,
+      })
+    );
+  }
+
+  await Promise.allSettled(tasks);
+};
 
 const UpdateTransactions = async (id, body) => {
   const { status } = body;
@@ -24,8 +70,12 @@ const UpdateTransactions = async (id, body) => {
   }
 
   const tx = await sequelize.transaction();
+  let updatedRecord = null;
+  let merchandiseName = null;
+  let releasingStock = false;
   try {
     const record = await Transactions.findByPk(id, {
+      include: [{ model: Merchandises, as: 'merchandises' }],
       transaction: tx,
       lock: tx.LOCK.UPDATE,
     });
@@ -41,7 +91,7 @@ const UpdateTransactions = async (id, body) => {
 
     const updates = { status };
 
-    const releasingStock = RELEASE_STATUSES.has(status) && record.stockDeducted;
+    releasingStock = RELEASE_STATUSES.has(status) && record.stockDeducted;
     if (releasingStock) {
       await restoreMerchandiseStock(
         { merchandiseId: record.merchandiseId, qty: record.qty },
@@ -52,6 +102,15 @@ const UpdateTransactions = async (id, body) => {
 
     await record.update(updates, { transaction: tx });
     await tx.commit();
+
+    updatedRecord = record;
+    merchandiseName = record.merchandises?.name || `Merchandise #${record.merchandiseId}`;
+
+    if (NOTIFY_STATUSES.has(status)) {
+      notifyShippingStatusUpdate(updatedRecord, status, merchandiseName).catch((err) => {
+        console.error(`Failed to send shipping status notification for transaction ${updatedRecord.id}:`, err.message);
+      });
+    }
 
     return {
       status: StatusCodes.OK,
