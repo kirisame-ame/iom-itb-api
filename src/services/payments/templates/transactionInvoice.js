@@ -1,5 +1,11 @@
 const { Merchandises } = require('../../../models');
-const { renderInvoiceHtml, formatDate, formatIDR, logoAttachment } = require('./emailLayout');
+const {
+  renderInvoiceHtml,
+  formatDate,
+  formatIDR,
+  logoAttachment,
+  buildOrderStatusUrl,
+} = require('./emailLayout');
 const { TransactionDto } = require('../../../dtos/payments');
 
 /**
@@ -47,6 +53,7 @@ const buildTransactionInvoice = async (trx) => {
       rows,
       grossAmount: gross,
       footer: 'Pesanan Anda akan segera diproses dan dikirim sesuai alamat di atas.',
+      orderStatusUrl: buildOrderStatusUrl(transactionDto.id),
     }),
     attachments: [logoAttachment()],
   };

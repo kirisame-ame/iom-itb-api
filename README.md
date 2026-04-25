@@ -174,6 +174,7 @@ Create a `.env` file in the root directory with the following variables:
 PORT=3000
 NODE_ENV=development
 BASE_URL=http://localhost:3000
+ORDER_STATUS_BASE_URL=https://iom-app.kirisame.jp.net/
 
 # Database Configuration
 DB_HOST=localhost

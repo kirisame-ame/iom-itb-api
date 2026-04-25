@@ -41,6 +41,42 @@ const formatDate = (d) => {
   });
 };
 
+const escapeHtml = (value) => String(value || '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
+const normalizeBaseUrl = (url) => String(url || '').trim().replace(/\/+$/, '');
+const DEFAULT_ORDER_STATUS_BASE_URL = 'https://iom-app.kirisame.jp.net';
+
+const getOrderStatusBaseUrl = () => {
+  const explicitBaseUrl = normalizeBaseUrl(process.env.ORDER_STATUS_BASE_URL);
+  if (explicitBaseUrl) return explicitBaseUrl;
+
+  return DEFAULT_ORDER_STATUS_BASE_URL;
+};
+
+const buildOrderStatusUrl = (transactionId) => {
+  if (!transactionId) return null;
+  const baseUrl = getOrderStatusBaseUrl();
+  if (!baseUrl) return null;
+  return `${baseUrl}/order-status?transactionId=${encodeURIComponent(transactionId)}`;
+};
+
+const renderOrderStatusCta = (orderStatusUrl) => {
+  if (!orderStatusUrl) return '';
+
+  const safeUrl = escapeHtml(orderStatusUrl);
+  return `
+      <div style="margin: 20px 0 0; padding: 16px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
+        <p style="margin: 0 0 12px; color: #1e3a8a; font-size: 14px;">Pantau perkembangan pesanan Anda melalui halaman status pesanan.</p>
+        <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #1d4ed8; color: #fff; text-decoration: none; padding: 10px 16px; border-radius: 6px; font-weight: 700; font-size: 14px;">Lihat Status Pesanan</a>
+        <p style="margin: 12px 0 0; color: #64748b; font-size: 12px; word-break: break-all;">Jika tombol tidak bisa dibuka, salin tautan ini: <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="color: #1d4ed8;">${safeUrl}</a></p>
+      </div>`;
+};
+
 /**
  * @typedef {Object} InvoiceRow
  * @property {string} label
@@ -55,13 +91,14 @@ const formatDate = (d) => {
  * @property {InvoiceRow[]} rows
  * @property {number|string} [grossAmount]
  * @property {string} [footer]
+ * @property {string} [orderStatusUrl]
  */
 
 /**
  * @param {InvoiceLayoutInput} input
  * @returns {string}
  */
-const renderInvoiceHtml = ({ title, recipientLabel, recipientName, rows, grossAmount, footer }) => `
+const renderInvoiceHtml = ({ title, recipientLabel, recipientName, rows, grossAmount, footer, orderStatusUrl }) => `
   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #222;">
     <div style="background: #4f46e5; color: #fff; padding: 20px 24px; border-radius: 8px 8px 0 0; text-align: center;">
       <img src="cid:${LOGO_CID}" alt="IOM ITB" style="max-width: 180px; height: auto; margin-bottom: 16px;" />
@@ -87,6 +124,7 @@ const renderInvoiceHtml = ({ title, recipientLabel, recipientName, rows, grossAm
         </tbody>
       </table>
       ${footer ? `<p style="margin: 20px 0 0; font-size: 13px; color: #6b7280;">${footer}</p>` : ''}
+      ${renderOrderStatusCta(orderStatusUrl)}
       <p style="margin: 24px 0 0; font-size: 12px; color: #9ca3af; text-align: center;">Email ini dikirim otomatis, mohon tidak membalas.</p>
     </div>
   </div>
@@ -97,6 +135,8 @@ module.exports = {
   LOGO_PATH,
   logoAttachment,
   renderInvoiceHtml,
+  renderOrderStatusCta,
+  buildOrderStatusUrl,
   formatIDR,
   formatDate,
 };

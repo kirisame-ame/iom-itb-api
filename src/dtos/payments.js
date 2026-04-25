@@ -291,6 +291,7 @@ class TransactionDto {
       qty: this.qty,
       amount: Number(this.getGrossAmount() || 0).toLocaleString('id-ID'),
       transactionId,
+      orderStatusTransactionId: this.id,
     };
   }
 
