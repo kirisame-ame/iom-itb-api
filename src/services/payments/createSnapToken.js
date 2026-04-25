@@ -202,7 +202,7 @@ const createTransactionSnapToken = async (payload) => {
 
     try {
       const snapToken = await snap.createTransaction(parameter);
-      return { token: snapToken.token, orderId: code, code };
+      return { token: snapToken.token, orderId: code, code, transactionId: newTransaction.id, grossAmount };
     } catch (snapError) {
       const compensateTx = await sequelize.transaction();
       try {

@@ -2,8 +2,51 @@ const { Transactions, Merchandises, sequelize } = require('../../models');
 const { StatusCodes } = require('http-status-codes');
 const BaseError = require('../../schemas/responses/BaseError');
 const { decreaseMerchandiseStock } = require('../payments/stockHelper');
+const sendEmail = require('../../utils/mailer');
+const sendWhatsApp = require('../../utils/whatsapp');
+const { buildTransactionProofReceivedEmail } = require('../payments/templates/paymentConfirmation');
 const fs = require('fs');
 const path = require('path');
+
+const formatIDR = (n) => Number(n || 0).toLocaleString('id-ID');
+
+const notifyTransactionProofReceived = async (trx, merchandiseName) => {
+  const amount = formatIDR(trx.grossAmount);
+  const tasks = [];
+
+  if (trx.noTelp) {
+    const message = `Halo ${trx.username}!\n\nBukti pembayaran Anda telah kami terima.\n\nKode Pesanan: ${trx.code}\nProduk: ${merchandiseName} x ${trx.qty}\nTotal: Rp ${amount}\n\nTim IOM ITB akan memverifikasi pembayaran dalam 1x24 jam. Anda akan mendapat notifikasi lanjutan setelah pembayaran terverifikasi.\n\nSalam,\nIOM ITB`;
+    tasks.push(
+      sendWhatsApp(
+        trx.noTelp,
+        message,
+        `transaction-${trx.id}-proof-received`,
+        `transaction-${trx.id}`
+      )
+    );
+  }
+
+  if (trx.email) {
+    const email = buildTransactionProofReceivedEmail({
+      username: trx.username,
+      code: trx.code,
+      merchandiseName,
+      qty: trx.qty,
+      amount,
+      transactionId: trx.id,
+    });
+    tasks.push(
+      sendEmail({
+        to: trx.email,
+        subject: email.subject,
+        html: email.html,
+        attachments: email.attachments,
+      })
+    );
+  }
+
+  await Promise.allSettled(tasks);
+};
 
 const CreateTransaction = async (body, files, uploadPath) => {
   const imageFile = files && files['payment'] ? files['payment'][0] : null;
@@ -64,6 +107,10 @@ const CreateTransaction = async (body, files, uploadPath) => {
     await newTransaction.save({ transaction });
 
     await transaction.commit();
+
+    notifyTransactionProofReceived(newTransaction, merchandise.name).catch((err) => {
+      console.error(`Failed to send proof-received notification for transaction ${newTransaction.id}:`, err.message);
+    });
 
     return {
       code: newTransaction.code,
