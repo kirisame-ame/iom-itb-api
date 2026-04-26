@@ -1,12 +1,12 @@
-const { Activities, sequelize } = require('../../models');
+const { Activities, ActivityMedia, sequelize } = require('../../models');
 const { StatusCodes } = require('http-status-codes');
 const BaseError = require('../../schemas/responses/BaseError');
 
-const CreateActivities = async (body, path) => {
+const CreateActivities = async (body) => {
   const transaction = await sequelize.transaction();
 
   try {
-    const { title, date, image, url } = body;
+    const { title, date, image, url, description, status, media } = body;
 
     if (!title || !date || !image) {
       throw new BaseError({
@@ -15,7 +15,6 @@ const CreateActivities = async (body, path) => {
       });
     }
 
-    // Cek apakah URL sudah digunakan
     if (url) {
       const existingActivity = await Activities.findOne({ where: { url } });
       if (existingActivity) {
@@ -30,18 +29,38 @@ const CreateActivities = async (body, path) => {
       {
         title,
         image,
-        description: body.description || '',
+        description: description || '',
         date,
         url: url || '',
+        status: status || 'draft'
       },
       { transaction }
     );
 
-    await transaction.commit();
-    return newActivity;
-  } catch (error) {
-    await transaction.rollback(); // Rollback transaksi jika terjadi kesalahan
+    // Insert media kalau ada
+    if (media && media.length > 0) {
+      const mediaData = media.map((item, index) => ({
+        activity_id: newActivity.id,
+        type: item.type, // 'image' | 'youtube'
+        value: item.value,
+        order: item.order ?? index,
+        caption: item.caption || null
+      }));
 
+      await ActivityMedia.bulkCreate(mediaData, { transaction });
+    }
+
+    await transaction.commit();
+
+    // Return dengan media
+    const result = await Activities.findOne({
+      where: { id: newActivity.id },
+      include: [{ model: ActivityMedia, as: 'media' }]
+    });
+
+    return result;
+  } catch (error) {
+    await transaction.rollback();
     throw new BaseError({
       status: error.status || StatusCodes.INTERNAL_SERVER_ERROR,
       message: `Gagal membuat aktivitas: ${error.message || error}`,

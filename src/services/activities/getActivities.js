@@ -1,10 +1,13 @@
-const { Activities } = require('../../models');
+const { Activities, ActivityMedia } = require('../../models');
 const { Op } = require('sequelize');
 
 const GetActivities = async ({ slug = null, search = '', page = 1, limit = 10 }) => {
   if (slug) {
     try {
-      const activity = await Activities.findOne({ where: { url: slug } });
+      const activity = await Activities.findOne({
+        where: { url: slug },
+        include: [{ model: ActivityMedia, as: 'media', order: [['order', 'ASC']] }]
+      });
       if (!activity) {
         return { message: `Kegiatan dengan slug ${slug} tidak ditemukan` };
       }
@@ -14,7 +17,6 @@ const GetActivities = async ({ slug = null, search = '', page = 1, limit = 10 })
     }
   }
 
-  // Logika untuk pencarian semua activities
   const pageNumber = parseInt(page) || 1;
   const pageLimit = parseInt(limit);
   const offset = (pageNumber - 1) * pageLimit;
@@ -24,6 +26,7 @@ const GetActivities = async ({ slug = null, search = '', page = 1, limit = 10 })
     limit: pageLimit,
     offset,
     order: [['createdAt', 'DESC']],
+    include: [{ model: ActivityMedia, as: 'media', order: [['order', 'ASC']] }]
   };
 
   if (search) {
@@ -32,7 +35,6 @@ const GetActivities = async ({ slug = null, search = '', page = 1, limit = 10 })
 
   try {
     const { rows, count } = await Activities.findAndCountAll(options);
-
     return {
       data: rows,
       total: count,
@@ -41,10 +43,7 @@ const GetActivities = async ({ slug = null, search = '', page = 1, limit = 10 })
     };
   } catch (error) {
     console.error('Database error in getActivities:', error);
-    
-    // Check if it's a connection timeout error
     if (error.message.includes('ETIMEDOUT') || error.message.includes('connect')) {
-      // Return empty data instead of throwing error for better UX
       return {
         data: [],
         total: 0,
@@ -52,7 +51,6 @@ const GetActivities = async ({ slug = null, search = '', page = 1, limit = 10 })
         totalPages: 0,
       };
     }
-    
     throw new Error(`Gagal mengambil data Kegiatan: ${error.message}`);
   }
 };

@@ -1,8 +1,6 @@
-const { Activities, sequelize } = require('../../models');
+const { Activities, ActivityMedia, sequelize } = require('../../models');
 const { StatusCodes } = require('http-status-codes');
 const BaseError = require('../../schemas/responses/BaseError');
-const fs = require('fs');
-const path = require('path');
 
 const UpdateActivities = async (id, body) => {
   const transaction = await sequelize.transaction();
@@ -17,16 +15,15 @@ const UpdateActivities = async (id, body) => {
       });
     }
 
-    const { title, date, description, url, image } = body;
+    const { title, date, description, url, image, status, media } = body;
 
-    if (!title && !date && !description && !url && !image) {
+    if (!title && !date && !description && !url && !image && !status && !media) {
       throw new BaseError({
         status: StatusCodes.BAD_REQUEST,
-        message: 'Setidaknya salah satu dari judul, tanggal, atau gambar harus diisi untuk pembaruan.',
+        message: 'Setidaknya salah satu field harus diisi untuk pembaruan.',
       });
     }
 
-    // Cek apakah URL sudah digunakan oleh aktivitas lain
     if (url && url !== activity.url) {
       const existingActivity = await Activities.findOne({ where: { url } });
       if (existingActivity) {
@@ -37,27 +34,47 @@ const UpdateActivities = async (id, body) => {
       }
     }
 
-    // Perbarui aktivitas dengan data baru
-    const updatedActivity = await Activities.update(
+    await Activities.update(
       {
         title: title || activity.title,
         image: image || activity.image,
-        description: description || activity.description,
+        description: description !== undefined ? description : activity.description,
         date: date !== undefined ? date : activity.date,
         url: url !== undefined ? url : activity.url,
+        status: status || activity.status,
       },
-      {
-        where: { id },
-        transaction,
-      }
+      { where: { id }, transaction }
     );
+
+    // Update media kalau ada
+    if (media !== undefined) {
+      // Hapus media lama
+      await ActivityMedia.destroy({ where: { activity_id: id }, transaction });
+
+      // Insert media baru
+      if (media.length > 0) {
+        const mediaData = media.map((item, index) => ({
+          activity_id: id,
+          type: item.type,
+          value: item.value,
+          order: item.order ?? index,
+          caption: item.caption || null
+        }));
+        await ActivityMedia.bulkCreate(mediaData, { transaction });
+      }
+    }
 
     await transaction.commit();
 
-    return updatedActivity;
-  } catch (error) {
-    await transaction.rollback(); // Rollback transaksi jika terjadi kesalahan
+    // Return data terbaru
+    const result = await Activities.findOne({
+      where: { id },
+      include: [{ model: ActivityMedia, as: 'media', order: [['order', 'ASC']] }]
+    });
 
+    return result;
+  } catch (error) {
+    await transaction.rollback();
     throw new BaseError({
       status: error.status || StatusCodes.INTERNAL_SERVER_ERROR,
       message: `Gagal memperbarui aktivitas: ${error.message || error}`,
