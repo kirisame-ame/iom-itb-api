@@ -52,7 +52,7 @@ module.exports = {
     const anggotaBaru = await TallySubmissions.count({
     where: {
         formSlug: 'pendaftaran_anggota',
-        createdAt: {
+        submittedAt: {
         [Op.between]: [startOfMonth, endOfMonth]
         }
     }
