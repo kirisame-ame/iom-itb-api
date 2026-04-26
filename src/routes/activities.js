@@ -6,12 +6,15 @@ const {
   UpdateActivityById,
   DeleteActivityById,
   GetActivityById,
+  GetActivityCounts,
 } = require('../controllers/activities');
  const JWTValidation = require('../middlewares/auth');
+const { Activities } = require('../models');
 
 const router = Router();
 
 router.get('', [], GetAllActivities);
+router.get('/counts', [], GetActivityCounts);
 router.get('/:slug', [], GetActivityBySlug);
 router.post('',/* JWTValidation, */CreateNewActivity);
 router.put('/:id',/* JWTValidation, */UpdateActivityById);
