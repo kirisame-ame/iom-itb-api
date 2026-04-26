@@ -197,7 +197,12 @@ const GetTallySubmissionById = async (req, res) => {
 const UpdatePengajuanBantuanStatus = async (req, res) => {
   try {
     const { tallySubmissionId } = req.params;
-    const { status, catatan, changedBy } = req.body;
+    const { status, catatan } = req.body;
+    const actor =
+      req.user?.preferred_username ||
+      req.user?.email ||
+      req.user?.sub ||
+      'SYSTEM_API';
 
     const normalizedStatus = status ? normalizeStatus(status) : null;
     if (status && !normalizedStatus) {
@@ -259,7 +264,7 @@ const UpdatePengajuanBantuanStatus = async (req, res) => {
           newStatus: nextStatus,
           oldCatatan: currentStatusRow.catatan,
           newCatatan: nextCatatan,
-          changedBy: changedBy || 'SYSTEM_API',
+          changedBy: actor,
           changedAt: new Date(),
         },
         { transaction },
@@ -269,7 +274,7 @@ const UpdatePengajuanBantuanStatus = async (req, res) => {
         {
           currentStatus: nextStatus,
           catatan: nextCatatan,
-          updatedBy: changedBy || 'SYSTEM_API',
+          updatedBy: actor,
         },
         { transaction },
       );
