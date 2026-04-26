@@ -1,7 +1,7 @@
 const { Activities, ActivityMedia } = require('../../models');
 const { Op } = require('sequelize');
 
-const GetActivities = async ({ slug = null, search = '', page = 1, limit = 10 }) => {
+const GetActivities = async ({ slug = null, search = '', page = 1, limit = 10, status = null }) => {
   if (slug) {
     try {
       const activity = await Activities.findOne({
@@ -29,8 +29,17 @@ const GetActivities = async ({ slug = null, search = '', page = 1, limit = 10 })
     include: [{ model: ActivityMedia, as: 'media', order: [['order', 'ASC']] }]
   };
 
+  // Filter by status
+  if (status && ['draft', 'published'].includes(status)) {
+    options.where.status = status;
+  }
+
+  // Search by judul atau konten
   if (search) {
-    options.where.title = { [Op.like]: `%${search}%` };
+    options.where[Op.or] = [
+      { title: { [Op.like]: `%${search}%` } },
+      { description: { [Op.like]: `%${search}%` } }
+    ];
   }
 
   try {
@@ -44,12 +53,7 @@ const GetActivities = async ({ slug = null, search = '', page = 1, limit = 10 })
   } catch (error) {
     console.error('Database error in getActivities:', error);
     if (error.message.includes('ETIMEDOUT') || error.message.includes('connect')) {
-      return {
-        data: [],
-        total: 0,
-        currentPage: pageNumber,
-        totalPages: 0,
-      };
+      return { data: [], total: 0, currentPage: pageNumber, totalPages: 0 };
     }
     throw new Error(`Gagal mengambil data Kegiatan: ${error.message}`);
   }
