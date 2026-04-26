@@ -6,6 +6,23 @@ const hideNamePattern = (name) => {
   return name?.split(' ')?.map(word => word ? word[0] + '*'.repeat(word.length - 1) : '')?.join(' ');
 };
 
+const toPublicDonation = (donation, no) => {
+  const plainDonation = donation.toJSON();
+  const donationOptions = plainDonation.options || {};
+  const isHidden = donationOptions.nameIsHidden;
+  const isHambaAllah = donationOptions.isHambaAllah;
+  const publicName = isHidden || isHambaAllah
+    ? hideNamePattern(isHambaAllah ? 'Hamba Allah' : plainDonation.name)
+    : plainDonation.name;
+
+  return {
+    no,
+    name: !isHidden && isHambaAllah ? 'Hamba Allah' : publicName,
+    amount: plainDonation.amount,
+    date: plainDonation.date,
+  };
+};
+
 // Add an id parameter for specific donation retrieval
 const GetDonations = async ({ id = null, query = {}, search = '', isAdmin = false }) => {
   if (id) {
@@ -49,6 +66,10 @@ const GetDonations = async ({ id = null, query = {}, search = '', isAdmin = fals
     order: orderBy,
   };
 
+  if (!isAdmin) {
+    options.attributes = ['name', 'amount', 'date', 'options'];
+  }
+
   if (search) {
     options.where.name = { [Op.like]: `%${search}%` };
   }
@@ -60,20 +81,9 @@ const GetDonations = async ({ id = null, query = {}, search = '', isAdmin = fals
   while (retries > 0) {
     try {
       const { rows, count } = await Donations.findAndCountAll(options);
-    const processedRows = isAdmin
-    ? rows
-    : rows.map(donation => {
-        const { options } = donation;
-        const isHidden = options?.nameIsHidden;
-        const isHambaAllah = options?.isHambaAllah;
-        const name = isHidden || isHambaAllah
-          ? hideNamePattern(isHambaAllah ? 'Hamba Allah' : donation?.name)
-          : donation?.name;
-        return {
-          ...donation.toJSON(),
-          name: !isHidden && isHambaAllah ? 'Hamba Allah' : name,
-        };
-      });
+      const processedRows = isAdmin
+        ? rows
+        : rows.map((donation, index) => toPublicDonation(donation, offset + index + 1));
 
       return {
         data: processedRows,
