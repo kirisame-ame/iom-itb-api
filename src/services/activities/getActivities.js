@@ -1,7 +1,21 @@
 const { Activities, ActivityMedia } = require('../../models');
 const { Op } = require('sequelize');
 
-const GetActivities = async ({ slug = null, search = '', page = 1, limit = 10, status = null }) => {
+const GetActivities = async ({ slug = null, id=null, search = '', page = 1, limit = 10, status = null }) => {
+
+  if (id) {
+    try {
+      const activity = await Activities.findOne({
+        where: { id },
+        include: [{ model: ActivityMedia, as: 'media', order: [['order', 'ASC']] }]
+      });
+      if (!activity) return { message: `Activity tidak ditemukan` };
+      return activity;
+    } catch (error) {
+      return { message: `Terjadi kesalahan: ${error.message}` };
+    }
+  }
+
   if (slug) {
     try {
       const activity = await Activities.findOne({
