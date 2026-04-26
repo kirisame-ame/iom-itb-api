@@ -1,6 +1,44 @@
 const { Transactions, Merchandises } = require('../../models');
 const { Op } = require('sequelize');
 
+const maskEmail = (email) => {
+  if (!email || !String(email).includes('@')) return email || null;
+  const [name, domain] = String(email).split('@');
+  return `${name.slice(0, 2)}${'*'.repeat(Math.max(name.length - 2, 2))}@${domain}`;
+};
+
+const maskPhone = (phone) => {
+  if (!phone) return null;
+  const value = String(phone);
+  if (value.length <= 6) return value;
+  return `${value.slice(0, 4)}${'*'.repeat(Math.max(value.length - 7, 3))}${value.slice(-3)}`;
+};
+
+const toPublicTransaction = (transaction) => {
+  const plain = transaction.toJSON();
+
+  return {
+    code: plain.code,
+    username: plain.username,
+    email: maskEmail(plain.email),
+    noTelp: maskPhone(plain.noTelp),
+    address: plain.address,
+    merchandiseId: plain.merchandiseId,
+    merchandises: plain.merchandises ? {
+      name: plain.merchandises.name,
+      image: plain.merchandises.image,
+      price: plain.merchandises.price,
+    } : null,
+    qty: plain.qty,
+    paymentMethod: plain.paymentMethod,
+    paymentStatus: plain.paymentStatus,
+    status: plain.status,
+    grossAmount: plain.grossAmount,
+    createdAt: plain.createdAt,
+    updatedAt: plain.updatedAt,
+  };
+};
+
 // Add an id parameter for specific transaction checks
 const GetTransactions = async (key, query = {}, search = '') => {
   // If id is provided, return the transaction by id
@@ -20,6 +58,30 @@ const GetTransactions = async (key, query = {}, search = '') => {
       return { data: transaction }; // Return transaction details
     } catch (error) {
       throw new Error(`Failed to retrieve transaction data: ${error.message}`);
+    }
+  }
+
+  if (key?.publicToken) {
+    try {
+      const transaction = await Transactions.findOne({
+        where: { publicToken: key.publicToken },
+        include: {
+          model: Merchandises,
+          as: 'merchandises',
+          attributes: ['name', 'image', 'price'],
+        },
+      });
+
+      if (!transaction) {
+        const error = new Error('Order status link is invalid or expired');
+        error.status = 404;
+        throw error;
+      }
+
+      return { data: toPublicTransaction(transaction) };
+    } catch (error) {
+      if (error.status) throw error;
+      throw new Error(`Failed to retrieve order status: ${error.message}`);
     }
   }
 

@@ -4,6 +4,7 @@ const BaseError = require('../../schemas/responses/BaseError');
 const { restoreMerchandiseStock } = require('../payments/stockHelper');
 const sendEmail = require('../../utils/mailer');
 const sendWhatsApp = require('../../utils/whatsapp');
+const { buildOrderStatusUrl } = require('../payments/templates/emailLayout');
 const {
   buildTransactionShippingStatusEmail,
   SHIPPING_STATUS_COPY,
@@ -15,10 +16,11 @@ const NOTIFY_STATUSES = new Set(['on process', 'on delivery', 'arrived', 'done',
 
 const notifyShippingStatusUpdate = async (trx, status, merchandiseName) => {
   const copy = SHIPPING_STATUS_COPY[status] || { headline: `Status pesanan diperbarui menjadi: ${status}`, body: '' };
+  const orderStatusUrl = buildOrderStatusUrl(trx.publicToken);
   const tasks = [];
 
   if (trx.noTelp) {
-    const message = `Halo ${trx.username}!\n\n${copy.headline}\n\nKode Pesanan: ${trx.code}\nProduk: ${merchandiseName} x ${trx.qty}\nStatus: ${status}\n\n${copy.body}\n\nSalam,\nIOM ITB`;
+    const message = `Halo ${trx.username}!\n\n${copy.headline}\n\nKode Pesanan: ${trx.code}\nProduk: ${merchandiseName} x ${trx.qty}\nStatus: ${status}\n\n${copy.body}\n\nPantau status pesanan:\n${orderStatusUrl}\n\nSalam,\nIOM ITB`;
     tasks.push(
       sendWhatsApp(
         trx.noTelp,
@@ -38,6 +40,8 @@ const notifyShippingStatusUpdate = async (trx, status, merchandiseName) => {
       address: trx.address,
       status,
       transactionId: trx.id,
+      orderStatusToken: trx.publicToken,
+      orderStatusUrl,
     });
     tasks.push(
       sendEmail({

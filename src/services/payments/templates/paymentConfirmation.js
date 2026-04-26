@@ -35,7 +35,7 @@ const buildTransactionPaymentEmail = ({
   qty,
   amount,
   transactionId,
-  orderStatusTransactionId,
+  orderStatusToken,
   orderStatusUrl,
 }) => ({
   subject: 'Konfirmasi Pesanan IOM ITB',
@@ -53,15 +53,14 @@ const buildTransactionPaymentEmail = ({
     <tr><td style="padding:8px 0;color:#6b7280;">Kode Pesanan</td><td style="padding:8px 0;font-weight:bold;">${code}</td></tr>
     <tr><td style="padding:8px 0;color:#6b7280;">Produk</td><td style="padding:8px 0;">${merchandiseName} x ${qty}</td></tr>
     <tr><td style="padding:8px 0;color:#6b7280;">Total</td><td style="padding:8px 0;font-weight:bold;color:#16a34a;">Rp ${amount}</td></tr>
-    <tr><td style="padding:8px 0;color:#6b7280;">ID Transaksi</td><td style="padding:8px 0;font-size:12px;color:#6b7280;">${transactionId}</td></tr>
   </table>
-  ${renderOrderStatusCta(orderStatusUrl || buildOrderStatusUrl(orderStatusTransactionId))}
+  ${renderOrderStatusCta(orderStatusUrl || buildOrderStatusUrl(orderStatusToken))}
   <p style="color:#6b7280;font-size:13px;margin-top:24px;">Salam,<br><strong>IOM ITB</strong></p>
 </div>`,
   attachments: [logoAttachment()],
 });
 
-const buildTransactionProofReceivedEmail = ({ username, code, merchandiseName, qty, amount, transactionId, orderStatusUrl }) => ({
+const buildTransactionProofReceivedEmail = ({ username, code, merchandiseName, qty, amount, transactionId, orderStatusToken, orderStatusUrl }) => ({
   subject: 'Bukti Pembayaran Diterima — IOM ITB',
   html: `
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;border:1px solid #e5e7eb;border-radius:8px;">
@@ -77,10 +76,9 @@ const buildTransactionProofReceivedEmail = ({ username, code, merchandiseName, q
     <tr><td style="padding:8px 0;color:#6b7280;">Kode Pesanan</td><td style="padding:8px 0;font-weight:bold;">${code}</td></tr>
     <tr><td style="padding:8px 0;color:#6b7280;">Produk</td><td style="padding:8px 0;">${merchandiseName} x ${qty}</td></tr>
     <tr><td style="padding:8px 0;color:#6b7280;">Total</td><td style="padding:8px 0;font-weight:bold;color:#16a34a;">Rp ${amount}</td></tr>
-    <tr><td style="padding:8px 0;color:#6b7280;">ID Transaksi</td><td style="padding:8px 0;font-size:12px;color:#6b7280;">${transactionId}</td></tr>
   </table>
   <p>Anda akan mendapat notifikasi lanjutan setelah pembayaran terverifikasi.</p>
-  ${renderOrderStatusCta(orderStatusUrl || buildOrderStatusUrl(transactionId))}
+  ${renderOrderStatusCta(orderStatusUrl || buildOrderStatusUrl(orderStatusToken))}
   <p style="color:#6b7280;font-size:13px;margin-top:24px;">Salam,<br><strong>IOM ITB</strong></p>
 </div>`,
   attachments: [logoAttachment()],
@@ -119,7 +117,7 @@ const SHIPPING_STATUS_COPY = {
   },
 };
 
-const buildTransactionShippingStatusEmail = ({ username, code, merchandiseName, qty, address, status, transactionId, orderStatusUrl }) => {
+const buildTransactionShippingStatusEmail = ({ username, code, merchandiseName, qty, address, status, transactionId, orderStatusToken, orderStatusUrl }) => {
   const copy = SHIPPING_STATUS_COPY[status] || {
     title: 'Update Status Pesanan',
     headline: `Status pesanan Anda diperbarui menjadi: ${status}`,
@@ -143,9 +141,8 @@ const buildTransactionShippingStatusEmail = ({ username, code, merchandiseName, 
     <tr><td style="padding:8px 0;color:#6b7280;">Produk</td><td style="padding:8px 0;">${merchandiseName} x ${qty}</td></tr>
     <tr><td style="padding:8px 0;color:#6b7280;">Status Saat Ini</td><td style="padding:8px 0;font-weight:bold;color:#1d4ed8;text-transform:capitalize;">${status}</td></tr>
     <tr><td style="padding:8px 0;color:#6b7280;">Alamat Pengiriman</td><td style="padding:8px 0;">${address}</td></tr>
-    <tr><td style="padding:8px 0;color:#6b7280;">ID Transaksi</td><td style="padding:8px 0;font-size:12px;color:#6b7280;">${transactionId}</td></tr>
   </table>
-  ${renderOrderStatusCta(orderStatusUrl || buildOrderStatusUrl(transactionId))}
+  ${renderOrderStatusCta(orderStatusUrl || buildOrderStatusUrl(orderStatusToken))}
   <p style="color:#6b7280;font-size:13px;margin-top:24px;">Salam,<br><strong>IOM ITB</strong></p>
 </div>`,
     attachments: [logoAttachment()],

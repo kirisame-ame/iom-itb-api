@@ -5,6 +5,8 @@ const { decreaseMerchandiseStock } = require('../payments/stockHelper');
 const sendEmail = require('../../utils/mailer');
 const sendWhatsApp = require('../../utils/whatsapp');
 const { buildTransactionProofReceivedEmail } = require('../payments/templates/paymentConfirmation');
+const { buildOrderStatusUrl } = require('../payments/templates/emailLayout');
+const { generateOrderTrackingToken } = require('../../utils/orderTrackingToken');
 const fs = require('fs');
 const path = require('path');
 
@@ -12,10 +14,11 @@ const formatIDR = (n) => Number(n || 0).toLocaleString('id-ID');
 
 const notifyTransactionProofReceived = async (trx, merchandiseName) => {
   const amount = formatIDR(trx.grossAmount);
+  const orderStatusUrl = buildOrderStatusUrl(trx.publicToken);
   const tasks = [];
 
   if (trx.noTelp) {
-    const message = `Halo ${trx.username}!\n\nBukti pembayaran Anda telah kami terima.\n\nKode Pesanan: ${trx.code}\nProduk: ${merchandiseName} x ${trx.qty}\nTotal: Rp ${amount}\n\nTim IOM ITB akan memverifikasi pembayaran dalam 1x24 jam. Anda akan mendapat notifikasi lanjutan setelah pembayaran terverifikasi.\n\nSalam,\nIOM ITB`;
+    const message = `Halo ${trx.username}!\n\nBukti pembayaran Anda telah kami terima.\n\nKode Pesanan: ${trx.code}\nProduk: ${merchandiseName} x ${trx.qty}\nTotal: Rp ${amount}\n\nTim IOM ITB akan memverifikasi pembayaran dalam 1x24 jam. Anda dapat memantau status pesanan melalui tautan berikut:\n${orderStatusUrl}\n\nSalam,\nIOM ITB`;
     tasks.push(
       sendWhatsApp(
         trx.noTelp,
@@ -34,6 +37,8 @@ const notifyTransactionProofReceived = async (trx, merchandiseName) => {
       qty: trx.qty,
       amount,
       transactionId: trx.id,
+      orderStatusToken: trx.publicToken,
+      orderStatusUrl,
     });
     tasks.push(
       sendEmail({
@@ -94,6 +99,7 @@ const CreateTransaction = async (body, files, uploadPath) => {
         merchandiseId,
         qty: qtyNum,
         payment: imageFileName,
+        publicToken: generateOrderTrackingToken(),
         status: 'waiting',
         paymentMethod: 'manual',
         paymentStatus: 'pending',
@@ -115,7 +121,8 @@ const CreateTransaction = async (body, files, uploadPath) => {
     return {
       code: newTransaction.code,
       message: 'Transaction created successfully',
-      transactionId: newTransaction.id,
+      orderStatusToken: newTransaction.publicToken,
+      orderStatusUrl: buildOrderStatusUrl(newTransaction.publicToken),
     };
   } catch (error) {
     await transaction.rollback();

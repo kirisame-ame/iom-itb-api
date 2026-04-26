@@ -4,6 +4,7 @@ const BaseError = require('../../schemas/responses/BaseError');
 const { snap } = require('../../utils/midtrans');
 const { decreaseMerchandiseStock, restoreMerchandiseStock } = require('./stockHelper');
 const { getDonationAmountBreakdown } = require('../donations/donationAmount');
+const { generateOrderTrackingToken } = require('../../utils/orderTrackingToken');
 
 const SNAP_EXPIRY_HOURS = 24;
 
@@ -158,6 +159,7 @@ const createTransactionSnapToken = async (payload) => {
       merchandiseId,
       qty: qtyNum,
       payment: null,
+      publicToken: generateOrderTrackingToken(),
       status: 'waiting',
       paymentMethod: 'midtrans',
       paymentStatus: 'pending',
@@ -202,7 +204,13 @@ const createTransactionSnapToken = async (payload) => {
 
     try {
       const snapToken = await snap.createTransaction(parameter);
-      return { token: snapToken.token, orderId: code, code, transactionId: newTransaction.id, grossAmount };
+      return {
+        token: snapToken.token,
+        orderId: code,
+        code,
+        orderStatusToken: newTransaction.publicToken,
+        grossAmount,
+      };
     } catch (snapError) {
       const compensateTx = await sequelize.transaction();
       try {

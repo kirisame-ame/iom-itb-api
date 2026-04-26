@@ -2,6 +2,7 @@ const { Donations, Transactions, Merchandises, sequelize } = require('../../mode
 const { DonationDto, TransactionDto } = require('../../dtos/payments');
 const sendEmail = require('../../utils/mailer');
 const sendWhatsApp = require('../../utils/whatsapp');
+const { buildOrderStatusUrl } = require('./templates/emailLayout');
 const { restoreMerchandiseStock } = require('./stockHelper');
 const {
   buildDonationPaymentEmail,
@@ -65,9 +66,10 @@ const notifyDonationPaid = async (donation, transactionId) => {
 const notifyTransactionPaid = async (trx, transactionId) => {
   const tasks = [];
   const confirmationPayload = trx.toPaymentConfirmationPayload(transactionId);
+  const orderStatusUrl = buildOrderStatusUrl(confirmationPayload.orderStatusToken);
 
   if (trx.noTelp) {
-    const message = `Halo ${trx.username}!\n\nPembayaran pesanan Anda telah berhasil!\n\nKode Pesanan: ${confirmationPayload.code}\nProduk: ${confirmationPayload.merchandiseName} x ${trx.qty}\nTotal: Rp ${confirmationPayload.amount}\n\nPesanan Anda sedang diproses.\n\nSalam,\nIOM ITB`;
+    const message = `Halo ${trx.username}!\n\nPembayaran pesanan Anda telah berhasil!\n\nKode Pesanan: ${confirmationPayload.code}\nProduk: ${confirmationPayload.merchandiseName} x ${trx.qty}\nTotal: Rp ${confirmationPayload.amount}\n\nPesanan Anda sedang diproses. Pantau status pesanan melalui tautan berikut:\n${orderStatusUrl}\n\nSalam,\nIOM ITB`;
     tasks.push(
       sendWhatsApp(
         trx.noTelp,
@@ -82,7 +84,10 @@ const notifyTransactionPaid = async (trx, transactionId) => {
     tasks.push(
       sendNotificationEmail(
         trx.email,
-        buildTransactionPaymentEmail(confirmationPayload)
+        buildTransactionPaymentEmail({
+          ...confirmationPayload,
+          orderStatusUrl,
+        })
       )
     );
   }

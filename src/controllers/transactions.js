@@ -33,6 +33,32 @@ const GetTransactionById = async (req, res) => {
   }
 };
 
+const GetTransactionByPublicToken = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const transaction = await GetTransaction({ publicToken: token });
+
+    if (!transaction) {
+      return res.status(StatusCodes.NOT_FOUND).json(new BaseResponse({
+        status: StatusCodes.NOT_FOUND,
+        message: 'Status pesanan tidak ditemukan',
+      }));
+    }
+
+    res.status(StatusCodes.OK).json(new BaseResponse({
+      status: StatusCodes.OK,
+      message: 'Status pesanan ditemukan',
+      data: transaction.data,
+    }));
+  } catch (error) {
+    const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
+    res.status(status).json(new BaseResponse({
+      status,
+      message: error.message || 'Terjadi kesalahan saat mengambil status pesanan',
+    }));
+  }
+};
+
 const GetTransactionByCode = async (req, res) => {
   try { // Mendapatkan code dari parameter URL
     const transaction = await GetTransaction({ code: code }); // Mengambil detail transaction berdasarkan code
@@ -161,6 +187,7 @@ const DeleteTransactionById = async (req, res) => {
 
 module.exports = {
   GetTransactionById,
+  GetTransactionByPublicToken,
   GetTransactionByCode,
   GetAllTransaction,
   CreateNewTransaction,

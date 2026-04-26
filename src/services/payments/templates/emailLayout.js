@@ -58,11 +58,11 @@ const getOrderStatusBaseUrl = () => {
   return DEFAULT_ORDER_STATUS_BASE_URL;
 };
 
-const buildOrderStatusUrl = (transactionId) => {
-  if (!transactionId) return null;
+const buildOrderStatusUrl = (orderStatusToken) => {
+  if (!orderStatusToken) return null;
   const baseUrl = getOrderStatusBaseUrl();
   if (!baseUrl) return null;
-  return `${baseUrl}/order-status?transactionId=${encodeURIComponent(transactionId)}`;
+  return `${baseUrl}/order-status?token=${encodeURIComponent(orderStatusToken)}`;
 };
 
 const renderOrderStatusCta = (orderStatusUrl) => {

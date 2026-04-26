@@ -27,6 +27,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true
     },
+    publicToken: {
+      type: DataTypes.STRING(80),
+      allowNull: false,
+      unique: true
+    },
     username: {
       type: DataTypes.STRING,
       allowNull: false

@@ -53,7 +53,7 @@ const buildTransactionInvoice = async (trx) => {
       rows,
       grossAmount: gross,
       footer: 'Pesanan Anda akan segera diproses dan dikirim sesuai alamat di atas.',
-      orderStatusUrl: buildOrderStatusUrl(transactionDto.id),
+      orderStatusUrl: buildOrderStatusUrl(transactionDto.publicToken),
     }),
     attachments: [logoAttachment()],
   };

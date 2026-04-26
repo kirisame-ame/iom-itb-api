@@ -228,6 +228,7 @@ class TransactionDto {
     this.merchandiseName = data.merchandiseName || null;
     this.qty = Number(data.qty || 0);
     this.code = data.code || null;
+    this.publicToken = data.publicToken || null;
     this.midtransOrderId = data.midtransOrderId || null;
     this.paymentMethod = data.paymentMethod || null;
     this.paymentStatus = data.paymentStatus || null;
@@ -260,6 +261,7 @@ class TransactionDto {
       merchandiseName: trx.merchandiseName || trx.merchandises?.name,
       qty: trx.qty,
       code: trx.code,
+      publicToken: trx.publicToken,
       midtransOrderId: trx.midtransOrderId,
       paymentMethod: trx.paymentMethod,
       paymentStatus: trx.paymentStatus,
@@ -291,7 +293,7 @@ class TransactionDto {
       qty: this.qty,
       amount: Number(this.getGrossAmount() || 0).toLocaleString('id-ID'),
       transactionId,
-      orderStatusTransactionId: this.id,
+      orderStatusToken: this.publicToken,
     };
   }
 
