@@ -44,6 +44,7 @@ const GetAllActivities = async (req, res) => {
       search,
       page: pageNumber,
       limit: pageLimit,
+      status,
     });
 
     const totalEntries = activities.total;
