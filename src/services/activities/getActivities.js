@@ -18,13 +18,22 @@ const GetActivities = async ({ slug = null, id=null, search = '', page = 1, limi
 
   if (slug) {
     try {
+      // Decode URL encoding dulu 
+      const decodedSlug = decodeURIComponent(slug);
+      
+      // Cari by exact match
       const activity = await Activities.findOne({
-        where: { url: slug },
+        where: {
+          [Op.or]: [
+            { url: slug },           // slug bersih: 'kegiatan-iom-2026', current approach
+            { url: decodedSlug },    // judul lama: 'Pengajuan Bantuan IOM-ITB...', old approach
+            { title: decodedSlug },  // fallback: cari by judul
+          ]
+        },
         include: [{ model: ActivityMedia, as: 'media', order: [['order', 'ASC']] }]
       });
-      if (!activity) {
-        return { message: `Kegiatan dengan slug ${slug} tidak ditemukan` };
-      }
+
+      if (!activity) return { message: `Kegiatan tidak ditemukan` };
       return activity;
     } catch (error) {
       return { message: `Terjadi kesalahan: ${error.message}` };
