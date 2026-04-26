@@ -1,7 +1,7 @@
 const { Activities, ActivityMedia } = require('../../models');
 const { Op } = require('sequelize');
 
-const GetActivities = async ({ slug = null, id=null, search = '', page = 1, limit = 10, status = null }) => {
+const GetActivities = async ({ slug = null, id=null, search = '', page = 1, limit = 10, status = null, sort='newest' }) => {
 
   if (id) {
     try {
@@ -35,11 +35,20 @@ const GetActivities = async ({ slug = null, id=null, search = '', page = 1, limi
   const pageLimit = parseInt(limit);
   const offset = (pageNumber - 1) * pageLimit;
 
+  const getOrder = () => {
+  switch (sort) {
+    case 'oldest': return [['createdAt', 'ASC']];
+    case 'az': return [['title', 'ASC']];
+    case 'za': return [['title', 'DESC']];
+    default: return [['createdAt', 'DESC']]; // newest
+  }
+};
+
   const options = {
     where: {},
     limit: pageLimit,
     offset,
-    order: [['createdAt', 'DESC']],
+    order: getOrder(),
     include: [{ model: ActivityMedia, as: 'media', order: [['order', 'ASC']] }]
   };
 

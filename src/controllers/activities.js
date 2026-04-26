@@ -38,7 +38,7 @@ const GetActivityBySlug = async (req, res) => {
 // Get all activities
 const GetAllActivities = async (req, res) => {
   try {
-    const { search, page = 1, limit = 10, status } = req.query;
+    const { search, page = 1, limit = 10, status, sort } = req.query;
     const pageNumber = parseInt(page);
     const pageLimit = parseInt(limit);
     const activities = await GetActivities({
@@ -46,6 +46,7 @@ const GetAllActivities = async (req, res) => {
       page: pageNumber,
       limit: pageLimit,
       status,
+      sort,
     });
 
     const totalEntries = activities.total;
