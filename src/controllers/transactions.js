@@ -65,9 +65,30 @@ const GetAllTransaction = async (req, res) => {
     const { search } = req.query;
     const code = req.query.q;
 
-    const transactions = await GetTransaction({code:code}, search); // Adjusted function call
-    console.log('kuntul', transactions)
-    res.status(StatusCodes.OK).json(new DataTable(transactions.data, transactions.total));
+    const transactions = await GetTransaction({ code }, req.query, search);
+
+    if (code) {
+      return res.status(StatusCodes.OK).json(new DataTable(transactions.data, transactions.total));
+    }
+
+    const pageNumber = parseInt(req.query.page, 10) || 1;
+    const pageLimit = parseInt(req.query.limit, 10) || 10;
+    const totalEntries = transactions.total || 0;
+    const totalPages = Math.ceil(totalEntries / pageLimit);
+    const start = totalEntries === 0 ? 0 : (pageNumber - 1) * pageLimit + 1;
+    const end = Math.min(pageNumber * pageLimit, totalEntries);
+
+    res.status(StatusCodes.OK).json({
+      data: transactions.data,
+      total: totalEntries,
+      pagination: {
+        currentPage: pageNumber,
+        totalPages,
+        start,
+        end,
+        totalEntries,
+      },
+    });
   } catch (error) {
     const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
     res.status(status).json(new BaseResponse({

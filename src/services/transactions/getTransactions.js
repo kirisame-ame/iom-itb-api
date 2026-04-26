@@ -45,8 +45,8 @@ const GetTransactions = async (key, query = {}, search = '') => {
   }
 
   // Logic for retrieving all transactions
-  const page = query.page || 1;  // Get page value from query params (default 1)
-  const limit = query.limit || 10;  // Get limit value from query params (default 10)
+  const page = parseInt(query.page, 10) || 1;  // Get page value from query params (default 1)
+  const limit = parseInt(query.limit, 10) || 10;  // Get limit value from query params (default 10)
   const offset = (page - 1) * limit;  // Calculate offset based on page and limit
 
   const options = {
@@ -61,14 +61,28 @@ const GetTransactions = async (key, query = {}, search = '') => {
     },
   };
 
-  // If there is a search query, filter by transaction name or product name
-  if (search) {
-    options.where = {
-      [Op.or]: [
-        { name: { [Op.like]: `%${search}%` } }, // Search in transaction name
-        { '$merchandises.name$': { [Op.like]: `%${search}%` } }, // Search in merchandise name
-      ],
-    };
+  if (query.status) {
+    options.where.status = query.status;
+  }
+
+  if (query.paymentMethod) {
+    options.where.paymentMethod = query.paymentMethod;
+  }
+
+  if (query.paymentStatus) {
+    options.where.paymentStatus = query.paymentStatus;
+  }
+
+  const searchKeyword = search || query.search;
+
+  if (searchKeyword) {
+    options.where[Op.or] = [
+      { code: { [Op.like]: `%${searchKeyword}%` } },
+      { username: { [Op.like]: `%${searchKeyword}%` } },
+      { email: { [Op.like]: `%${searchKeyword}%` } },
+      { noTelp: { [Op.like]: `%${searchKeyword}%` } },
+      { '$merchandises.name$': { [Op.like]: `%${searchKeyword}%` } },
+    ];
   }
 
   try {
