@@ -132,9 +132,31 @@ const DeleteActivityById = async (req, res) => {
   }
 };
 
+const GetActivityById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const activity = await GetActivities({ id: parseInt(id) });
+    if (!activity || activity.message) {
+      return res.status(StatusCodes.NOT_FOUND).json(new BaseResponse({
+        status: StatusCodes.NOT_FOUND,
+        message: 'Activity tidak ditemukan',
+      }));
+    }
+    res.status(StatusCodes.OK).json(new BaseResponse({
+      status: StatusCodes.OK,
+      message: 'Activity ditemukan',
+      data: activity,
+    }));
+  } catch (error) {
+    const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
+    res.status(status).json(new BaseResponse({ status, message: error.message }));
+  }
+};
+
 module.exports = {
   GetActivityBySlug,
   GetAllActivities,
+  GetActivityById,
   CreateNewActivity,
   UpdateActivityById,
   DeleteActivityById,

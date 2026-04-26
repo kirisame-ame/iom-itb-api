@@ -69,10 +69,10 @@ const CreateActivities = async (body) => {
   try {
     const { title, date, image, url, description, status, media } = body;
 
-    if (!title || !date || !image) {
+    if (!title || !date) {
       throw new BaseError({
         status: StatusCodes.BAD_REQUEST,
-        message: 'Judul, tanggal, dan gambar wajib diisi.',
+        message: 'Judul dan tanggal wajib diisi.',
       });
     }
 
