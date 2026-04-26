@@ -1,7 +1,6 @@
 const { Activities, ActivityMedia, sequelize } = require('../../models');
 const { StatusCodes } = require('http-status-codes');
 const BaseError = require('../../schemas/responses/BaseError');
-
 const sanitizeHtml = require('sanitize-html');
 
 const sanitizeDescription = (html) => {
@@ -27,13 +26,6 @@ const sanitizeDescription = (html) => {
     }
   });
 };
-
-module.exports = UpdateActivities;
-
-const cleanDescription = description !== undefined 
-  ? sanitizeDescription(description) 
-  : activity.description;
-
 
 const validateMedia = (media) => {
   for (const item of media) {
@@ -105,6 +97,11 @@ const UpdateActivities = async (id, body) => {
       validateMedia(media);
     }
 
+    // cleanDescription dipindah ke dalam fungsi
+    const cleanDescription = description !== undefined
+      ? sanitizeDescription(description)
+      : activity.description;
+
     await Activities.update(
       {
         title: title || activity.title,
@@ -117,12 +114,9 @@ const UpdateActivities = async (id, body) => {
       { where: { id }, transaction }
     );
 
-    // Update media kalau ada
     if (media !== undefined) {
-      // Hapus media lama
       await ActivityMedia.destroy({ where: { activity_id: id }, transaction });
 
-      // Insert media baru
       if (media.length > 0) {
         const mediaData = media.map((item, index) => ({
           activity_id: id,
@@ -137,7 +131,6 @@ const UpdateActivities = async (id, body) => {
 
     await transaction.commit();
 
-    // Return data terbaru
     const result = await Activities.findOne({
       where: { id },
       include: [{ model: ActivityMedia, as: 'media', order: [['order', 'ASC']] }]
@@ -152,3 +145,5 @@ const UpdateActivities = async (id, body) => {
     });
   }
 };
+
+module.exports = UpdateActivities;
