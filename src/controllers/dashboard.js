@@ -3,6 +3,7 @@
 const statsService = require('../services/dashboard/dashboardStats');
 const chartsService = require('../services/dashboard/dashboardCharts');
 const recentService = require('../services/dashboard/dashboardRecent');
+const paymentMonitoringService = require('../services/dashboard/paymentMonitoring');
 
 module.exports = {
   async getStats(req, res) {
@@ -17,6 +18,11 @@ module.exports = {
 
   async getRecent(req, res) {
     const data = await recentService.getRecent();
+    res.json(data);
+  },
+
+  async getPaymentMonitoring(req, res) {
+    const data = await paymentMonitoringService.getPaymentMonitoring(req.query);
     res.json(data);
   }
 };
