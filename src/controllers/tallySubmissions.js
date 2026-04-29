@@ -4,6 +4,7 @@ const { Op, literal } = require('sequelize');
 const { StatusCodes } = require('http-status-codes');
 const db = require('../models');
 const BaseResponse = require('../schemas/responses/BaseResponse');
+const triggerWhatsappNotification = require('../services/tallyWebhooks/triggerWhatsappNotificationStub');
 
 const ALLOWED_FORM_SLUGS = ['pendaftaran_anggota', 'pengajuan_bantuan', 'orang_tua_asuh'];
 
@@ -318,8 +319,78 @@ const UpdatePengajuanBantuanStatus = async (req, res) => {
   }
 };
 
+const SendTallySubmissionWhatsapp = async (req, res) => {
+  try {
+    const { tallySubmissionId } = req.params;
+    const formSlug = req.params.formSlug || 'pengajuan_bantuan';
+
+    if (!ALLOWED_FORM_SLUGS.includes(formSlug)) {
+      return res.status(StatusCodes.BAD_REQUEST).json(
+        new BaseResponse({
+          status: StatusCodes.BAD_REQUEST,
+          message: 'Invalid formSlug',
+        }),
+      );
+    }
+
+    const submission = await db.TallySubmissions.findOne({
+      where: {
+        formSlug,
+        tallySubmissionId,
+      },
+    });
+
+    if (!submission) {
+      return res.status(StatusCodes.NOT_FOUND).json(
+        new BaseResponse({
+          status: StatusCodes.NOT_FOUND,
+          message: 'Pengajuan bantuan submission not found',
+        }),
+      );
+    }
+
+    const sendResult = await triggerWhatsappNotification({
+      formSlug,
+      submission,
+      idempotencySuffix: `manual-${Date.now()}`,
+    });
+
+    if (!sendResult?.ok) {
+      const status = sendResult?.skipped
+        ? StatusCodes.BAD_REQUEST
+        : StatusCodes.BAD_GATEWAY;
+
+      return res.status(status).json(
+        new BaseResponse({
+          status,
+          message: sendResult?.skipped
+            ? `WhatsApp notification skipped: ${sendResult.reason || 'UNKNOWN'}`
+            : `Failed to send WhatsApp notification: ${sendResult?.reason || 'UNKNOWN'}`,
+          data: sendResult || null,
+        }),
+      );
+    }
+
+    return res.status(StatusCodes.OK).json(
+      new BaseResponse({
+        status: StatusCodes.OK,
+        message: 'WhatsApp notification sent successfully',
+        data: sendResult,
+      }),
+    );
+  } catch (error) {
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(
+      new BaseResponse({
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
+        message: error.message || 'Failed to send WhatsApp notification',
+      }),
+    );
+  }
+};
+
 module.exports = {
   ListTallySubmissionsByForm,
   GetTallySubmissionById,
   UpdatePengajuanBantuanStatus,
+  SendTallySubmissionWhatsapp,
 };

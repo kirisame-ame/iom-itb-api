@@ -99,7 +99,7 @@ function buildClientReference(formSlug, submission) {
   return raw.slice(0, 255);
 }
 
-const triggerWhatsappNotification = async ({ formSlug, submission }) => {
+const triggerWhatsappNotification = async ({ formSlug, submission, idempotencySuffix = null }) => {
   const notificationsEnabled =
     String(
       process.env.TALLY_WHATSAPP_NOTIFICATIONS_ENABLED || "true",
@@ -112,7 +112,11 @@ const triggerWhatsappNotification = async ({ formSlug, submission }) => {
       submissionId: submission?.id,
       tallySubmissionId: submission?.tallySubmissionId,
     });
-    return;
+    return {
+      ok: false,
+      skipped: true,
+      reason: "DISABLED_BY_ENV",
+    };
   }
 
   const phoneResult = normalizeWhatsAppRecipient(
@@ -131,7 +135,13 @@ const triggerWhatsappNotification = async ({ formSlug, submission }) => {
       whatsappRaw: submission?.extractedWhatsapp || null,
       whatsappNormalizeReason: phoneResult.reason,
     });
-    return;
+    return {
+      ok: false,
+      skipped: true,
+      reason: "INVALID_RECIPIENT",
+      whatsappRaw: submission?.extractedWhatsapp || null,
+      whatsappNormalized: null,
+    };
   }
 
   const answersByLabel = submission?.payload?.answersByLabel || {};
@@ -154,10 +164,19 @@ const triggerWhatsappNotification = async ({ formSlug, submission }) => {
       submissionId: submission?.id,
       tallySubmissionId: submission?.tallySubmissionId,
     });
-    return;
+    return {
+      ok: false,
+      skipped: true,
+      reason: "EMPTY_RENDERED_MESSAGE",
+      whatsappRaw: submission?.extractedWhatsapp || null,
+      whatsappNormalized: phoneResult.normalized,
+    };
   }
 
-  const idempotencyKey = buildIdempotencyKey(formSlug, submission);
+  const baseIdempotencyKey = buildIdempotencyKey(formSlug, submission);
+  const idempotencyKey = idempotencySuffix
+    ? `${baseIdempotencyKey}-${sanitizeKeySegment(idempotencySuffix, 60)}`
+    : baseIdempotencyKey;
   const clientReference = buildClientReference(formSlug, submission);
 
   const sendResult = await sendWhatsApp(
@@ -183,10 +202,23 @@ const triggerWhatsappNotification = async ({ formSlug, submission }) => {
 
   if (sendResult?.ok) {
     console.info("WHATSAPP_NOTIFICATION_QUEUED", logPayload);
-    return;
+    return {
+      ...sendResult,
+      whatsappRaw: submission?.extractedWhatsapp || null,
+      whatsappNormalized: phoneResult.normalized,
+      idempotencyKey,
+      clientReference,
+    };
   }
 
   console.warn("WHATSAPP_NOTIFICATION_NOT_QUEUED", logPayload);
+  return {
+    ...sendResult,
+    whatsappRaw: submission?.extractedWhatsapp || null,
+    whatsappNormalized: phoneResult.normalized,
+    idempotencyKey,
+    clientReference,
+  };
 };
 
 module.exports = triggerWhatsappNotification;
