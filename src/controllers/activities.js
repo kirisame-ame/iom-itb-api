@@ -10,7 +10,7 @@ const { Activities } = require('../models');
 const GetActivityBySlug = async (req, res) => {
   try {
     const { slug } = req.params; // Mendapatkan id dari parameter URL
-    const activity = await GetActivities({ slug }); // Mengambil detail activity berdasarkan ID
+    const activity = await GetActivities({ slug, status:'published' }); // Mengambil detail activity berdasarkan ID
 
     // Jika activity tidak ditemukan, kembalikan respon 404
     if (!activity || activity.message) {
@@ -38,14 +38,14 @@ const GetActivityBySlug = async (req, res) => {
 // Get all activities
 const GetAllActivities = async (req, res) => {
   try {
-    const { search, page = 1, limit = 10, status, sort } = req.query;
+    const { search, page = 1, limit = 10, sort } = req.query;
     const pageNumber = parseInt(page);
-    const pageLimit = parseInt(limit);
+    const pageLimit = Math.min(parseInt(limit), 50);
     const activities = await GetActivities({
       search,
       page: pageNumber,
       limit: pageLimit,
-      status,
+      status: 'published',
       sort,
     });
 
@@ -71,6 +71,34 @@ const GetAllActivities = async (req, res) => {
       status,
       message: error.message,
     }));
+  }
+};
+
+const GetAllActivitiesAdmin = async (req, res) => {
+  try {
+    const { search, page = 1, limit = 10, status, sort } = req.query;
+    const pageNumber = parseInt(page);
+    const pageLimit = Math.min(parseInt(limit), 100);
+    const activities = await GetActivities({
+      search,
+      page: pageNumber,
+      limit: pageLimit,
+      status,
+      sort,
+    });
+
+    const totalEntries = activities.total;
+    const totalPages = Math.ceil(totalEntries / pageLimit);
+    const start = (pageNumber - 1) * pageLimit + 1;
+    const end = Math.min(pageNumber * pageLimit, totalEntries);
+
+    res.status(StatusCodes.OK).json({
+      data: new DataTable(activities.data)?.data,
+      pagination: { currentPage: pageNumber, totalPages, start, end, totalEntries },
+    });
+  } catch (error) {
+    const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
+    res.status(status).json(new BaseResponse({ status, message: error.message }));
   }
 };
 
@@ -174,6 +202,7 @@ const GetActivityById = async (req, res) => {
 module.exports = {
   GetActivityBySlug,
   GetAllActivities,
+   GetAllActivitiesAdmin,
   GetActivityById,
   CreateNewActivity,
   UpdateActivityById,

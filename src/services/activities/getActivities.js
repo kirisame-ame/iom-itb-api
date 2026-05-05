@@ -6,7 +6,10 @@ const GetActivities = async ({ slug = null, id=null, search = '', page = 1, limi
   if (id) {
     try {
       const activity = await Activities.findOne({
-        where: { id },
+        where: {
+          id,
+          ...(status && { status }), 
+        },
         include: [{ model: ActivityMedia, as: 'media', order: [['order', 'ASC']] }]
       });
       if (!activity) return { message: `Activity tidak ditemukan` };
@@ -18,21 +21,18 @@ const GetActivities = async ({ slug = null, id=null, search = '', page = 1, limi
 
   if (slug) {
     try {
-      // Decode URL encoding dulu 
       const decodedSlug = decodeURIComponent(slug);
-      
-      // Cari by exact match
       const activity = await Activities.findOne({
         where: {
+          ...(status && { status }), 
           [Op.or]: [
-            { url: slug },           // slug bersih: 'kegiatan-iom-2026', current approach
-            { url: decodedSlug },    // judul lama: 'Pengajuan Bantuan IOM-ITB...', old approach
-            { title: decodedSlug },  // fallback: cari by judul
+            { url: slug },
+            { url: decodedSlug },
+            { title: decodedSlug },
           ]
         },
         include: [{ model: ActivityMedia, as: 'media', order: [['order', 'ASC']] }]
       });
-
       if (!activity) return { message: `Kegiatan tidak ditemukan` };
       return activity;
     } catch (error) {
@@ -49,7 +49,7 @@ const GetActivities = async ({ slug = null, id=null, search = '', page = 1, limi
     case 'oldest': return [['createdAt', 'ASC']];
     case 'az': return [['title', 'ASC']];
     case 'za': return [['title', 'DESC']];
-    default: return [['createdAt', 'DESC']]; // newest
+    default: return [['createdAt', 'DESC']]; 
   }
 };
 
