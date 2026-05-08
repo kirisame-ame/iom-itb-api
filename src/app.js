@@ -106,6 +106,8 @@ app.get('/', (req, res) => {
 });
 
 // forgotPasswordJob.start();
+const { broadcastJob } = require('./utils/cron');
+broadcastJob.start();
 
 app.use(router);
 
