@@ -146,8 +146,8 @@ const selectApp = async (req, res) => {
 
 const registerUser = async (req, res) => {
   try {
-    const { email, password, role } = req.body;
-    const result = await registerKeycloakUser({ email, password, role });
+    const { email, password, role, username, firstName, lastName } = req.body;
+    const result = await registerKeycloakUser({ email, password, role, username, firstName, lastName });
 
     res.status(StatusCodes.CREATED).json(
       new BaseResponse({

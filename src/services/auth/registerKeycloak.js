@@ -59,20 +59,25 @@ async function getAdminToken(baseUrl, realm) {
   return data.access_token;
 }
 
-async function createKeycloakUser(baseUrl, realm, adminToken, { email, password }) {
+async function createKeycloakUser(baseUrl, realm, adminToken, { email, password, username, firstName, lastName }) {
+  const payload = {
+    username: username || email,
+    email,
+    enabled: true,
+    emailVerified: true,
+    credentials: [{ type: 'password', value: password, temporary: false }],
+  };
+
+  if (firstName) payload.firstName = firstName;
+  if (lastName) payload.lastName = lastName;
+
   const res = await fetch(`${baseUrl}/admin/realms/${realm}/users`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${adminToken}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      username: email,
-      email,
-      enabled: true,
-      emailVerified: true,
-      credentials: [{ type: 'password', value: password, temporary: false }],
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (res.status === 409) {
@@ -150,7 +155,7 @@ async function assignRealmRole(baseUrl, realm, adminToken, userId, role) {
   }
 }
 
-const registerKeycloakUser = async ({ email, password, role }) => {
+const registerKeycloakUser = async ({ email, password, role, username, firstName, lastName }) => {
   if (!email || !password || !role) {
     throw new BaseError({
       status: StatusCodes.BAD_REQUEST,
@@ -175,7 +180,7 @@ const registerKeycloakUser = async ({ email, password, role }) => {
 
   const { baseUrl, realm } = parseKeycloakUrl(issuerUrl);
   const adminToken = await getAdminToken(baseUrl, realm);
-  const userId = await createKeycloakUser(baseUrl, realm, adminToken, { email, password });
+  const userId = await createKeycloakUser(baseUrl, realm, adminToken, { email, password, username, firstName, lastName });
   const roleObj = await getRealmRole(baseUrl, realm, adminToken, role);
   await assignRealmRole(baseUrl, realm, adminToken, userId, roleObj);
 
