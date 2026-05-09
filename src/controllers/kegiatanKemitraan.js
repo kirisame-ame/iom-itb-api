@@ -23,13 +23,15 @@ module.exports = {
   },
   Create: async (req, res) => {
     try {
-      const data = await CreateService(req.body);
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const data = await CreateService(req.body, req.files, baseUrl);
       res.status(StatusCodes.CREATED).json(new BaseResponse({ status: StatusCodes.CREATED, message: 'Created', data }));
     } catch (error) { sendError(res, error); }
   },
   Update: async (req, res) => {
     try {
-      const data = await UpdateService(req.params.id, req.body);
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const data = await UpdateService(req.params.id, req.body, req.files, baseUrl);
       res.status(StatusCodes.OK).json(new BaseResponse({ status: StatusCodes.OK, message: 'Updated', data }));
     } catch (error) { sendError(res, error); }
   },
