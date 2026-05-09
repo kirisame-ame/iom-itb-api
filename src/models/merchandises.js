@@ -52,7 +52,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true
     },
     kategori: {
-      type: DataTypes.ENUM('Stiker', 'Busana', 'ATK'),
+      type: DataTypes.STRING,
       allowNull: true
     },
   }, {
