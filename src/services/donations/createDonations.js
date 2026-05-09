@@ -1,13 +1,16 @@
 const { Donations, sequelize } = require('../../models');
 const { StatusCodes } = require('http-status-codes');
 const BaseError = require('../../schemas/responses/BaseError');
+const { getDonationAmountBreakdown } = require('./donationAmount');
 
 const CreateDonations = async (body) => {
   const transaction = await sequelize.transaction();
 
   try {
     // Validate required fields
-    const { name, email, noWhatsapp, notification, proof, nameIsHidden, amount, date, bank, isHambaAllah, donationType, facultyId} = body;
+    const { name, email, noWhatsapp, notification, proof, amount, date, bank, donationType, facultyId } = body;
+    const nameIsHidden = body.nameIsHidden ?? body.options?.nameIsHidden ?? false;
+    const isHambaAllah = body.isHambaAllah ?? body.options?.isHambaAllah ?? false;
 
     if(!email && !noWhatsapp){
       throw new BaseError({
@@ -23,6 +26,8 @@ const CreateDonations = async (body) => {
       });
     }
 
+    const amountBreakdown = await getDonationAmountBreakdown({ amount, facultyId });
+
     // Create the donation record within a transaction
     const newDonation = await Donations.create(
       {
@@ -31,15 +36,18 @@ const CreateDonations = async (body) => {
         noWhatsapp,
         proof,
         notification,
-        amount,
-        grossAmount: amount,
+        amount: amountBreakdown.baseAmount,
+        grossAmount: amountBreakdown.grossAmount,
         donationType,
-        facultyId,
+        facultyId: amountBreakdown.facultyId,
+        kodeUnik: amountBreakdown.uniqueCode,
         paymentMethod: 'manual',
         paymentStatus: 'pending',
         options: {
-          nameIsHidden: nameIsHidden,
-          isHambaAllah:  isHambaAllah
+          donationType,
+          facultyId: amountBreakdown.facultyId,
+          nameIsHidden,
+          isHambaAllah,
         },
         date,
         bank

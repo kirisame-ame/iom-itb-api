@@ -23,7 +23,9 @@ const PaymentsRouter = require('./payments');
 const FacultiesRouter = require('./faculties');
 const TallyWebhookRouter = require('./tallyWebhooks');
 const TallySubmissionsRouter = require('./tallySubmissions');
-const BroadcastRouter = require('./broadcast');
+const DashboardRouter = require('./dashboard');
+const ImageRouter = require('./image');
+const BankesMockRouter = require('./bankesMock');
 
 router.get('/', (req, res) => {
   res.json({
@@ -53,6 +55,8 @@ router.use('/payments', PaymentsRouter);
 router.use('/faculties', FacultiesRouter);
 router.use('/webhooks/tally', TallyWebhookRouter);
 router.use('/tally-submissions', TallySubmissionsRouter);
-router.use('/broadcast', BroadcastRouter);
+router.use('/dashboard', DashboardRouter);
+router.use('/images', ImageRouter);
+router.use('/bankes-mock', BankesMockRouter);
 
 module.exports = router;

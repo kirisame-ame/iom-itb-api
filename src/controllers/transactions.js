@@ -33,6 +33,32 @@ const GetTransactionById = async (req, res) => {
   }
 };
 
+const GetTransactionByPublicToken = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const transaction = await GetTransaction({ publicToken: token });
+
+    if (!transaction) {
+      return res.status(StatusCodes.NOT_FOUND).json(new BaseResponse({
+        status: StatusCodes.NOT_FOUND,
+        message: 'Status pesanan tidak ditemukan',
+      }));
+    }
+
+    res.status(StatusCodes.OK).json(new BaseResponse({
+      status: StatusCodes.OK,
+      message: 'Status pesanan ditemukan',
+      data: transaction.data,
+    }));
+  } catch (error) {
+    const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
+    res.status(status).json(new BaseResponse({
+      status,
+      message: error.message || 'Terjadi kesalahan saat mengambil status pesanan',
+    }));
+  }
+};
+
 const GetTransactionByCode = async (req, res) => {
   try { // Mendapatkan code dari parameter URL
     const transaction = await GetTransaction({ code: code }); // Mengambil detail transaction berdasarkan code
@@ -65,9 +91,30 @@ const GetAllTransaction = async (req, res) => {
     const { search } = req.query;
     const code = req.query.q;
 
-    const transactions = await GetTransaction({code:code}, search); // Adjusted function call
-    console.log('kuntul', transactions)
-    res.status(StatusCodes.OK).json(new DataTable(transactions.data, transactions.total));
+    const transactions = await GetTransaction({ code }, req.query, search);
+
+    if (code) {
+      return res.status(StatusCodes.OK).json(new DataTable(transactions.data, transactions.total));
+    }
+
+    const pageNumber = parseInt(req.query.page, 10) || 1;
+    const pageLimit = parseInt(req.query.limit, 10) || 10;
+    const totalEntries = transactions.total || 0;
+    const totalPages = Math.ceil(totalEntries / pageLimit);
+    const start = totalEntries === 0 ? 0 : (pageNumber - 1) * pageLimit + 1;
+    const end = Math.min(pageNumber * pageLimit, totalEntries);
+
+    res.status(StatusCodes.OK).json({
+      data: transactions.data,
+      total: totalEntries,
+      pagination: {
+        currentPage: pageNumber,
+        totalPages,
+        start,
+        end,
+        totalEntries,
+      },
+    });
   } catch (error) {
     const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
     res.status(status).json(new BaseResponse({
@@ -140,6 +187,7 @@ const DeleteTransactionById = async (req, res) => {
 
 module.exports = {
   GetTransactionById,
+  GetTransactionByPublicToken,
   GetTransactionByCode,
   GetAllTransaction,
   CreateNewTransaction,
