@@ -1,23 +1,9 @@
 const { KegiatanKemitraan } = require('../../models');
-
-const ALLOWED_FIELDS = [
-  'kemitraanId',
-  'name',
-  'description',
-  'location',
-  'startDate',
-  'endDate',
-  'status',
-  'image',
-];
+const { CreateKegiatanKemitraanDto } = require('../../dtos/kegiatanKemitraan');
+const assertKemitraanExists = require('./assertKemitraanExists');
 
 module.exports = async (body = {}) => {
-  const payload = {};
-  for (const key of ALLOWED_FIELDS) {
-    const value = body[key];
-    if (value === undefined) continue;
-    if (key === 'image' && typeof value !== 'string') continue;
-    payload[key] = value;
-  }
-  return await KegiatanKemitraan.create(payload);
+  const dto = CreateKegiatanKemitraanDto.from(body);
+  await assertKemitraanExists(dto.kemitraanId);
+  return await KegiatanKemitraan.create(dto.toPersistence());
 };
