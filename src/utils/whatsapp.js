@@ -1,13 +1,21 @@
+const normalizePhone = (phone) => {
+  const digits = String(phone).replace(/\D/g, '');
+  if (digits.startsWith('0')) return '+62' + digits.slice(1);
+  if (digits.startsWith('62')) return '+' + digits;
+  return '+' + digits;
+};
+
 const sendWhatsApp = async (to, message, idempotencyKey, clientReference) => {
   const apiKey = process.env.WA_API_KEY;
   const baseUrl = process.env.WA_API_URL || 'https://ppl.adharidwan.com';
 
   if (!apiKey) return;
 
-  const body = { to, message };
+  const normalizedTo = normalizePhone(to);
+  const body = { to: normalizedTo, message };
   if (clientReference) body.client_reference = clientReference;
 
-  console.log(`[WhatsApp] Sending to ${to}, key=${idempotencyKey}`);
+  console.log(`[WhatsApp] Sending to ${normalizedTo} (original: ${to}), key=${idempotencyKey}`);
   try {
     const res = await fetch(`${baseUrl}/api/v1/messages/whatsapp`, {
       method: 'POST',
