@@ -16,6 +16,8 @@ const getKemitraan = async (query = {}) => {
       ? {
           [Op.or]: [
             { name: { [Op.like]: `%${search}%` } },
+            { picName: { [Op.like]: `%${search}%` } },
+            { picPhone: { [Op.like]: `%${search}%` } },
             { description: { [Op.like]: `%${search}%` } },
           ],
         }

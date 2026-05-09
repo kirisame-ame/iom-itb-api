@@ -2,7 +2,7 @@
 
 /**
  * Idempotent repair: bring the existing `Kemitraan` table into line with the
- * current Kemitraan model (fields: name, description, image, mou).
+ * current Kemitraan model (fields: name, description, picName, picPhone, image, mou).
  * Renames `title` -> `name` if the legacy column is present.
  */
 module.exports = {
@@ -26,6 +26,18 @@ module.exports = {
     if (!after.description) {
       await queryInterface.addColumn('Kemitraan', 'description', {
         type: Sequelize.TEXT,
+        allowNull: true,
+      });
+    }
+    if (!after.picName) {
+      await queryInterface.addColumn('Kemitraan', 'picName', {
+        type: Sequelize.STRING,
+        allowNull: true,
+      });
+    }
+    if (!after.picPhone) {
+      await queryInterface.addColumn('Kemitraan', 'picPhone', {
+        type: Sequelize.STRING,
         allowNull: true,
       });
     }

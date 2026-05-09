@@ -165,6 +165,8 @@ create table if not exists "Kemitraan" (
   id bigserial primary key,
   name text not null,
   description text,
+  "picName" text,
+  "picPhone" text,
   image text,
   mou text,
   "createdAt" timestamptz not null default now(),

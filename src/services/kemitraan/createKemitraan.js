@@ -1,55 +1,28 @@
 const { Kemitraan } = require('../../models');
 const { StatusCodes } = require('http-status-codes');
 const BaseError = require('../../schemas/responses/BaseError');
-const fs = require('fs');
-const path = require('path');
+const { CreateKemitraanDto } = require('../../dtos/kemitraan');
+const {
+  pickFile,
+  moveUploadedFile,
+  cleanupUploadedFiles,
+} = require('./kemitraanUploads');
 
 const createKemitraan = async (body, files, baseUrl) => {
-  const imageFile = files && files['logo'] ? files['logo'][0]
-    : files && files['image'] ? files['image'][0]
-    : null;
-  const mouFile = files && files['file'] ? files['file'][0]
-    : files && files['mou'] ? files['mou'][0]
-    : null;
+  const imageFile = pickFile(files, 'logo', 'image');
+  const mouFile = pickFile(files, 'file', 'mou');
 
   try {
-    if (!body || !body.name) {
-      throw new BaseError({
-        status: StatusCodes.BAD_REQUEST,
-        message: 'Nama instansi (Mitra) wajib diisi',
-      });
-    }
-
-    const uploadDir = path.resolve(__dirname, '../../uploads');
-    if ((imageFile || mouFile) && !fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
-    let imageUrl = typeof body.image === 'string' ? body.image : null;
-    if (imageFile) {
-      const dest = path.join(uploadDir, imageFile.filename);
-      if (imageFile.path !== dest) fs.renameSync(imageFile.path, dest);
-      imageUrl = `${baseUrl}/uploads/${imageFile.filename}`;
-    }
-
-    let mouUrl = typeof body.mou === 'string' ? body.mou : null;
-    if (mouFile) {
-      const dest = path.join(uploadDir, mouFile.filename);
-      if (mouFile.path !== dest) fs.renameSync(mouFile.path, dest);
-      mouUrl = `${baseUrl}/uploads/${mouFile.filename}`;
-    }
-
-    const newKemitraan = await Kemitraan.create({
-      name: body.name,
-      description: body.description || null,
-      image: imageUrl,
-      mou: mouUrl,
+    const dto = CreateKemitraanDto.from({
+      ...body,
+      image: imageFile ? moveUploadedFile(imageFile, baseUrl) : body?.image,
+      mou: mouFile ? moveUploadedFile(mouFile, baseUrl) : body?.mou,
     });
 
-    return newKemitraan;
+    return await Kemitraan.create(dto.toPersistence());
   } catch (error) {
-    if (imageFile && fs.existsSync(imageFile.path)) fs.unlinkSync(imageFile.path);
-    if (mouFile && fs.existsSync(mouFile.path)) fs.unlinkSync(mouFile.path);
+    cleanupUploadedFiles(imageFile, mouFile);
+    if (error instanceof BaseError) throw error;
 
     throw new BaseError({
       status: error.status || StatusCodes.INTERNAL_SERVER_ERROR,
