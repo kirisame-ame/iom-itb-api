@@ -3,13 +3,11 @@ const { Model, Op } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
   class Activities extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
     static associate(models) {
-      // Define any associations if needed in the future
+      Activities.hasMany(models.ActivityMedia, {
+        foreignKey: 'activity_id',
+        as: 'media'
+      });
     }
 
     static async getActivitiesByTitle(keyword) {
@@ -20,7 +18,7 @@ module.exports = (sequelize, DataTypes) => {
       });
     }
   }
-  
+
   Activities.init({
     id: {
       type: DataTypes.INTEGER,
@@ -40,12 +38,17 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     description: {
-      type: DataTypes.TEXT,
+      type: DataTypes.TEXT('long'),
       allowNull: true
     },
     url: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    status: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      defaultValue: 'published'
     }
   }, {
     sequelize,

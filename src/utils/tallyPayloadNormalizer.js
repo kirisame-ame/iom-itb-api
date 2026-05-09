@@ -1,6 +1,7 @@
 'use strict';
 
 const CHOICE_TYPES = new Set(['MULTIPLE_CHOICE', 'DROPDOWN', 'CHECKBOXES']);
+const FILE_UPLOAD_TYPE = 'FILE_UPLOAD';
 
 // Tally CSV exports these as header columns, not actual form answers.
 const CSV_METADATA_LABELS = new Set([
@@ -107,6 +108,14 @@ function buildWebhookNormalized(rawPayload, formSlug) {
 
     if (CHOICE_TYPES.has(type)) {
       value = resolveChoiceValue(field);
+    } else if (type === FILE_UPLOAD_TYPE) {
+      const raw = field?.value;
+      if (!Array.isArray(raw) || raw.length === 0) {
+        value = null;
+      } else {
+        const urls = raw.map((f) => f?.url).filter(Boolean);
+        value = urls.length ? urls.join(', ') : null;
+      }
     } else {
       const raw = field?.value;
       if (raw === null || raw === undefined) {

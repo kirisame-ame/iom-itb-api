@@ -5,6 +5,7 @@ const CreateActivity = require('../services/activities/createActivities');
 const GetActivities = require('../services/activities/getActivities');
 const UpdateActivity = require('../services/activities/updateActivities');
 const DeleteActivity = require('../services/activities/deleteActivities');
+const { Activities } = require('../models');
 
 const GetActivityBySlug = async (req, res) => {
   try {
@@ -37,13 +38,15 @@ const GetActivityBySlug = async (req, res) => {
 // Get all activities
 const GetAllActivities = async (req, res) => {
   try {
-    const { search, page = 1, limit = 10 } = req.query;
+    const { search, page = 1, limit = 10, status, sort } = req.query;
     const pageNumber = parseInt(page);
     const pageLimit = parseInt(limit);
     const activities = await GetActivities({
       search,
       page: pageNumber,
       limit: pageLimit,
+      status,
+      sort,
     });
 
     const totalEntries = activities.total;
@@ -68,6 +71,22 @@ const GetAllActivities = async (req, res) => {
       status,
       message: error.message,
     }));
+  }
+};
+
+const GetActivityCounts = async (req, res) => {
+  try {
+    const total = await Activities.count();
+    const draft = await Activities.count({ where: { status: 'draft' } });
+    const published = await Activities.count({ where: { status: 'published' } });
+    res.status(StatusCodes.OK).json(new BaseResponse({
+      status: StatusCodes.OK,
+      message: 'OK',
+      data: { total, draft, published }
+    }));
+  } catch (error) {
+    const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
+    res.status(status).json(new BaseResponse({ status, message: error.message }));
   }
 };
 
@@ -131,10 +150,33 @@ const DeleteActivityById = async (req, res) => {
   }
 };
 
+const GetActivityById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const activity = await GetActivities({ id: parseInt(id) });
+    if (!activity || activity.message) {
+      return res.status(StatusCodes.NOT_FOUND).json(new BaseResponse({
+        status: StatusCodes.NOT_FOUND,
+        message: 'Activity tidak ditemukan',
+      }));
+    }
+    res.status(StatusCodes.OK).json(new BaseResponse({
+      status: StatusCodes.OK,
+      message: 'Activity ditemukan',
+      data: activity,
+    }));
+  } catch (error) {
+    const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
+    res.status(status).json(new BaseResponse({ status, message: error.message }));
+  }
+};
+
 module.exports = {
   GetActivityBySlug,
   GetAllActivities,
+  GetActivityById,
   CreateNewActivity,
   UpdateActivityById,
   DeleteActivityById,
+  GetActivityCounts
 };

@@ -7,6 +7,7 @@ const {
   isAnyRoleAllowed,
   isRoleAllowedForApp,
 } = require('../utils/ssoAccess');
+const registerKeycloakUser = require('../services/auth/registerKeycloak');
 
 const normalizeUser = (user = {}) => ({
   sub: user.sub,
@@ -112,6 +113,15 @@ const selectApp = async (req, res) => {
 
     const redirectUrl = appId === 'web' ? '/dashboard' : getAppUrl(appId);
 
+    if (!redirectUrl || redirectUrl === '#') {
+      return res.status(StatusCodes.SERVICE_UNAVAILABLE).json(
+        new BaseResponse({
+          status: StatusCodes.SERVICE_UNAVAILABLE,
+          message: `Aplikasi "${appId}" belum dikonfigurasi di server. Hubungi administrator.`,
+        })
+      );
+    }
+
     res.status(StatusCodes.OK).json(
       new BaseResponse({
         status: StatusCodes.OK,
@@ -134,8 +144,32 @@ const selectApp = async (req, res) => {
   }
 };
 
+const registerUser = async (req, res) => {
+  try {
+    const { email, password, role, username, firstName, lastName } = req.body;
+    const result = await registerKeycloakUser({ email, password, role, username, firstName, lastName });
+
+    res.status(StatusCodes.CREATED).json(
+      new BaseResponse({
+        status: StatusCodes.CREATED,
+        message: 'User registered successfully',
+        data: result,
+      })
+    );
+  } catch (error) {
+    const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
+    res.status(status).json(
+      new BaseResponse({
+        status,
+        message: error.message || 'Registration failed',
+      })
+    );
+  }
+};
+
 module.exports = {
   getMe,
   getApps,
   selectApp,
+  registerUser,
 };

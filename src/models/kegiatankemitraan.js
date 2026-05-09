@@ -6,22 +6,52 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       this.belongsTo(models.Kemitraan, {
         foreignKey: 'kemitraanId',
-        as: 'Kemitraan'
+        as: 'kemitraan',
       });
     }
   }
 
-  KegiatanKemitraan.init({
-    kemitraanId: DataTypes.INTEGER,
-    title: DataTypes.STRING,
-    subtitle: DataTypes.STRING,
-    date: DataTypes.DATE,
-    description: DataTypes.TEXT,
-    image: DataTypes.STRING
-  }, {
-    sequelize,
-    modelName: 'KegiatanKemitraan',
-    tableName: 'KegiatanKemitraans',
-  });
+  KegiatanKemitraan.init(
+    {
+      kemitraanId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
+      name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      description: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      location: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      startDate: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      endDate: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      status: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'planned',
+      },
+      image: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+    },
+    {
+      sequelize,
+      modelName: 'KegiatanKemitraan',
+      tableName: 'KegiatanKemitraans',
+    }
+  );
   return KegiatanKemitraan;
 };

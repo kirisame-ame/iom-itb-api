@@ -1,6 +1,8 @@
 const { Transactions, Merchandises, sequelize } = require('../../models');
 const { StatusCodes } = require('http-status-codes');
 const BaseError = require('../../schemas/responses/BaseError');
+const { buildOrderStatusUrl } = require('../payments/templates/emailLayout');
+const { generateOrderTrackingToken } = require('../../utils/orderTrackingToken');
 const fs = require('fs');
 const path = require('path'); // Ensure path is imported
 
@@ -41,6 +43,10 @@ const CreateUsers = async (body, files, uploadPath) => {
         merchandiseId,
         qty,
         payment: imageFileName, // Store the payment image path
+        publicToken: generateOrderTrackingToken(),
+        paymentMethod: 'manual',
+        paymentStatus: 'pending',
+        grossAmount: Number(merchandise.price || 0) * Number(qty || 0),
         status: 'waiting', // Default status
       },
       { transaction }
@@ -59,7 +65,8 @@ const CreateUsers = async (body, files, uploadPath) => {
     return {
       code: newTransaction.code,
       message: 'Transaction created successfully',
-      transactionId: newTransaction.id // Optional: return transaction ID if needed
+      orderStatusToken: newTransaction.publicToken,
+      orderStatusUrl: buildOrderStatusUrl(newTransaction.publicToken),
     };
   } catch (error) {
     // Rollback the transaction in case of error

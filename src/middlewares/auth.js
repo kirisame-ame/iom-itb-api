@@ -27,7 +27,7 @@ function getKey(header, callback) {
 
 const JWTValidation = (req, res, next) => {
     if (process.env.DEV_BYPASS_AUTH === 'true') {
-        req.user = { sub: 'dev', email: 'dev@local', roles: ['admin'], isVerified: true, roleName: 'admin' };
+        req.user = { sub: 'dev', email: 'dev@local', preferred_username: 'dev', roles: ['admin'], isVerified: true, roleName: 'admin' };
         req.payload = { id: 'dev', email: 'dev@local' };
         res.locals.user = req.user;
         return next();
