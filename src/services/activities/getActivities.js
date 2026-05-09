@@ -1,16 +1,16 @@
-const { Activities, ActivityMedia } = require('../../models');
+const { Activities, Tags } = require('../../models');
 const { Op } = require('sequelize');
 
-const GetActivities = async ({ slug = null, id=null, search = '', page = 1, limit = 10, status = null, sort='newest' }) => {
+const GetActivities = async ({ slug = null, id = null, search = '', page = 1, limit = 10, status = null, sort = 'newest' }) => {
 
   if (id) {
     try {
       const activity = await Activities.findOne({
         where: {
           id,
-          ...(status && { status }), 
+          ...(status && { status }),
         },
-        include: [{ model: ActivityMedia, as: 'media', order: [['order', 'ASC']] }]
+        include: [{ model: Tags, as: 'tags' }]
       });
       if (!activity) return { message: `Activity tidak ditemukan` };
       return activity;
@@ -24,14 +24,14 @@ const GetActivities = async ({ slug = null, id=null, search = '', page = 1, limi
       const decodedSlug = decodeURIComponent(slug);
       const activity = await Activities.findOne({
         where: {
-          ...(status && { status }), 
+          ...(status && { status }),
           [Op.or]: [
             { url: slug },
             { url: decodedSlug },
             { title: decodedSlug },
           ]
         },
-        include: [{ model: ActivityMedia, as: 'media', order: [['order', 'ASC']] }]
+        include: [{ model: Tags, as: 'tags' }]
       });
       if (!activity) return { message: `Kegiatan tidak ditemukan` };
       return activity;
@@ -45,28 +45,26 @@ const GetActivities = async ({ slug = null, id=null, search = '', page = 1, limi
   const offset = (pageNumber - 1) * pageLimit;
 
   const getOrder = () => {
-  switch (sort) {
-    case 'oldest': return [['createdAt', 'ASC']];
-    case 'az': return [['title', 'ASC']];
-    case 'za': return [['title', 'DESC']];
-    default: return [['createdAt', 'DESC']]; 
-  }
-};
+    switch (sort) {
+      case 'oldest': return [['createdAt', 'ASC']];
+      case 'az': return [['title', 'ASC']];
+      case 'za': return [['title', 'DESC']];
+      default: return [['createdAt', 'DESC']];
+    }
+  };
 
   const options = {
     where: {},
     limit: pageLimit,
     offset,
     order: getOrder(),
-    include: [{ model: ActivityMedia, as: 'media', order: [['order', 'ASC']] }]
+    include: [{ model: Tags, as: 'tags' }]
   };
 
-  // Filter by status
   if (status && ['draft', 'published'].includes(status)) {
     options.where.status = status;
   }
 
-  // Search by judul atau konten
   if (search) {
     options.where[Op.or] = [
       { title: { [Op.like]: `%${search}%` } },

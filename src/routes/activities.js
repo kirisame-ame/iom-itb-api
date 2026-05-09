@@ -17,6 +17,7 @@ const router = Router();
 // Public
 router.get('/', [], GetAllActivities);
 router.get('/:slug', [], GetActivityBySlug);
+router.get('/tags', [], GetAllTags);
 
 // Admin
 router.get('/admin/all', JWTValidation, GetAllActivitiesAdmin);   
