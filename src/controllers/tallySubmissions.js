@@ -5,7 +5,12 @@ const { StatusCodes } = require('http-status-codes');
 const db = require('../models');
 const BaseResponse = require('../schemas/responses/BaseResponse');
 const triggerWhatsappNotification = require('../services/tallyWebhooks/triggerWhatsappNotificationStub');
-const sendEmail = require('../utils/email');
+const sendEmail = require('../utils/mailer');
+
+const {
+  renderPengajuanStatusHtml,
+  logoAttachment,
+} = require('../utils/emailBantuan');
 
 const ALLOWED_FORM_SLUGS = ['pendaftaran_anggota', 'pengajuan_bantuan', 'orang_tua_asuh'];
 
@@ -339,22 +344,45 @@ const UpdatePengajuanBantuanStatus = async (req, res) => {
     }
 
     if (!result.unchanged) {
-      const email = result.submission?.payload?.answersByLabel?.Email;
-      const nama = result.submission?.payload?.answersByLabel?.Nama;
+      const payload =
+        typeof result.submission?.payload === 'string'
+          ? JSON.parse(result.submission.payload)
+          : result.submission?.payload;
+
+      const email = payload?.answersByLabel?.Email;
+      const nama = payload?.answersByLabel?.Nama;
 
       if (email) {
         const subject = 'Update Status Pengajuan Bantuan';
 
-        const message = buildStatusMessage({
+        const textMessage = buildStatusMessage({
           nama,
           tallySubmissionId,
           status: result.statusRow.currentStatus,
           catatan: result.statusRow.catatan,
         });
+
+        const htmlMessage = renderPengajuanStatusHtml({
+          recipientName: nama,
+          tallySubmissionId,
+          status: result.statusRow.currentStatus,
+          catatan: result.statusRow.catatan,
+          updatedAt: result.statusRow.updatedAt,
+        });
+
         try {
-          await sendEmail(email, subject, message);
+          await sendEmail({
+            to: email,
+            subject,
+            html: htmlMessage,
+            text: textMessage,
+            attachments: [logoAttachment()],
+          });
         } catch (err) {
-          console.warn('[Email] Failed to send status update:', err.message);
+          console.warn(
+            '[Email] Failed to send status update:',
+            err.message
+          );
         }
       }
     }
