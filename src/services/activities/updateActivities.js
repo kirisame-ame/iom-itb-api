@@ -8,15 +8,24 @@ const sanitizeDescription = (html) => {
     allowedTags: [
       'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
       'strong', 'em', 'u', 's', 'blockquote',
-      'ul', 'ol', 'li', 'img', 'a', 'br'
+      'ul', 'ol', 'li', 'img', 'a', 'br', 'div', 'iframe'
     ],
     allowedAttributes: {
-      'img': ['src', 'alt', 'style'],   
+      'img': ['src', 'alt', 'style'],
       'a': ['href', 'target', 'rel'],
-      'p': ['style'],                  
+      'p': ['style'],
       'h1': ['style'],
       'h2': ['style'],
       'h3': ['style'],
+      'div': ['data-youtube-video'],                         
+      'iframe': [                                            
+        'src', 'width', 'height',
+        'allowfullscreen', 'autoplay',
+        'disablekbcontrols', 'enableiframeapi',
+        'endtime', 'ivloadpolicy', 'loop',
+        'modestbranding', 'origin', 'playlist',
+        'rel', 'start', 'frameborder', 'allow'
+      ],
     },
     allowedStyles: {
       '*': {
@@ -27,7 +36,8 @@ const sanitizeDescription = (html) => {
     },
     allowedSchemesByTag: {
       'img': ['https', 'http'],
-      'a': ['https']
+      'a': ['https'],
+      'iframe': ['https'],              
     },
     transformTags: {
       'a': (tagName, attribs) => ({
@@ -76,10 +86,13 @@ const UpdateActivities = async (id, body) => {
         message: 'Maksimal 3 tag per kegiatan.',
       });
     }
+    console.log('RAW DESCRIPTION:', description);
 
     const cleanDescription = description !== undefined
       ? sanitizeDescription(description)
       : activity.description;
+
+    console.log('CLEAN DESCRIPTION:', cleanDescription);
 
     await Activities.update(
       {
