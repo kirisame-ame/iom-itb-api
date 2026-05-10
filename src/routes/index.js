@@ -26,6 +26,7 @@ const TallySubmissionsRouter = require('./tallySubmissions');
 const DashboardRouter = require('./dashboard');
 const ImageRouter = require('./image');
 const BankesMockRouter = require('./bankesMock');
+const NotificationsRouter = require('./notifications');
 
 router.get('/', (req, res) => {
   res.json({
@@ -58,5 +59,6 @@ router.use('/tally-submissions', TallySubmissionsRouter);
 router.use('/dashboard', DashboardRouter);
 router.use('/images', ImageRouter);
 router.use('/bankes-mock', BankesMockRouter);
+router.use('/notifications', NotificationsRouter);
 
 module.exports = router;
