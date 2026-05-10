@@ -181,12 +181,13 @@ const getPaymentNotifications = async (user) => {
  */
 const markPaymentNotificationsRead = async (user) => {
   const readState = await readStateForUser(user);
-  const lastReadAt = new Date();
+  const dbNow = require('sequelize').fn('NOW');
 
-  await readState.update({ lastReadAt });
+  await readState.update({ lastReadAt: dbNow });
 
+  // Return a new date for immediate frontend consumption
   return {
-    lastReadAt,
+    lastReadAt: new Date(),
     unreadCount: 0,
   };
 };
