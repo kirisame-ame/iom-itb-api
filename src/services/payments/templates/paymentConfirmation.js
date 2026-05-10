@@ -6,6 +6,7 @@ const {
   renderEmailFooter,
 } = require('./emailLayout');
 const { DONATION_TYPE_LABEL } = require('../../../dtos/payments');
+const { getRenderedEmailTemplate } = require('./templateRenderer');
 
 const escapeHtml = (value) => String(value ?? '')
   .replace(/&/g, '&amp;')
@@ -25,35 +26,51 @@ const prettifyDonationType = (value) => {
   return DONATION_TYPE_LABEL[value] || titleCase(value);
 };
 
-const buildDonationPaymentEmail = ({ name, amount, donationType, transactionId }) => {
+const buildDonationPaymentEmail = async ({ name, amount, donationType, transactionId }) => {
   const formattedDonationType = prettifyDonationType(donationType);
 
+  const data = {
+    name,
+    amount,
+    donationType: formattedDonationType,
+    transactionId,
+  };
+
+  const rendered = await getRenderedEmailTemplate(
+    'donation_payment_confirmation',
+    data,
+    {
+      subject: 'Konfirmasi Donasi IOM ITB',
+      body: `Halo {{name}},
+
+Pembayaran donasi Anda telah berhasil dikonfirmasi.
+
+Jenis Donasi: {{donationType}}
+Jumlah: Rp {{amount}}
+ID Transaksi: {{transactionId}}
+
+Terima kasih atas kontribusi Anda kepada IOM ITB!`,
+    }
+  );
+
   return {
-  subject: 'Konfirmasi Donasi IOM ITB',
-  html: `
+    subject: rendered.subject,
+    html: `
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;border:1px solid #e5e7eb;border-radius:8px;">
   <div style="text-align:center;margin-bottom:20px;">
     <img src="cid:${LOGO_CID}" alt="IOM ITB" style="max-width:180px;height:auto;" />
   </div>
   <h2 style="color:#1d4ed8;margin-bottom:4px;">IOM ITB</h2>
-  <p style="color:#6b7280;margin-top:0;">Konfirmasi Pembayaran Donasi</p>
+  <p style="color:#6b7280;margin-top:0;">${rendered.subject}</p>
   <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;">
-  <p>Halo <strong>${escapeHtml(name)}</strong>,</p>
-  <p>Pembayaran donasi Anda telah berhasil dikonfirmasi.</p>
-  <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-    <tr><td style="padding:8px 0;color:#6b7280;">Jenis Donasi</td><td style="padding:8px 0;font-weight:bold;">${escapeHtml(formattedDonationType)}</td></tr>
-    <tr><td style="padding:8px 0;color:#6b7280;">Jumlah</td><td style="padding:8px 0;font-weight:bold;color:#16a34a;">Rp ${escapeHtml(amount)}</td></tr>
-    <tr><td style="padding:8px 0;color:#6b7280;">ID Transaksi</td><td style="padding:8px 0;font-size:12px;color:#6b7280;">${escapeHtml(transactionId)}</td></tr>
-  </table>
-  <p>Terima kasih atas kontribusi Anda kepada IOM ITB!</p>
-  <p style="color:#6b7280;font-size:13px;margin-top:24px;">Salam,<br><strong>IOM ITB</strong></p>
+  ${rendered.bodyHtml}
   ${renderEmailFooter()}
 </div>`,
-  attachments: [logoAttachment()],
+    attachments: [logoAttachment()],
   };
 };
 
-const buildTransactionPaymentEmail = ({
+const buildTransactionPaymentEmail = async ({
   username,
   code,
   merchandiseName,
@@ -62,29 +79,51 @@ const buildTransactionPaymentEmail = ({
   transactionId,
   orderStatusToken,
   orderStatusUrl,
-}) => ({
-  subject: 'Konfirmasi Pesanan IOM ITB',
-  html: `
+}) => {
+  const data = {
+    username,
+    code,
+    merchandiseName,
+    qty,
+    amount,
+    transactionId,
+    orderStatusUrl: orderStatusUrl || buildOrderStatusUrl(orderStatusToken),
+  };
+
+  const rendered = await getRenderedEmailTemplate(
+    'transaction_payment_confirmation',
+    data,
+    {
+      subject: 'Konfirmasi Pesanan IOM ITB',
+      body: `Halo {{username}},
+
+Pembayaran pesanan Anda telah berhasil.
+
+Kode Pesanan: {{code}}
+Produk: {{merchandiseName}} x {{qty}}
+Total: Rp {{amount}}
+
+Terima kasih telah berbelanja di IOM ITB!`,
+    }
+  );
+
+  return {
+    subject: rendered.subject,
+    html: `
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;border:1px solid #e5e7eb;border-radius:8px;">
   <div style="text-align:center;margin-bottom:20px;">
     <img src="cid:${LOGO_CID}" alt="IOM ITB" style="max-width:180px;height:auto;" />
   </div>
   <h2 style="color:#1d4ed8;margin-bottom:4px;">IOM ITB</h2>
-  <p style="color:#6b7280;margin-top:0;">Konfirmasi Pembayaran Merchandise</p>
+  <p style="color:#6b7280;margin-top:0;">${rendered.subject}</p>
   <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;">
-  <p>Halo <strong>${username}</strong>,</p>
-  <p>Pembayaran pesanan Anda telah berhasil! Pesanan sedang diproses.</p>
-  <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-    <tr><td style="padding:8px 0;color:#6b7280;">Kode Pesanan</td><td style="padding:8px 0;font-weight:bold;">${code}</td></tr>
-    <tr><td style="padding:8px 0;color:#6b7280;">Produk</td><td style="padding:8px 0;">${merchandiseName} x ${qty}</td></tr>
-    <tr><td style="padding:8px 0;color:#6b7280;">Total</td><td style="padding:8px 0;font-weight:bold;color:#16a34a;">Rp ${amount}</td></tr>
-  </table>
-  ${renderOrderStatusCta(orderStatusUrl || buildOrderStatusUrl(orderStatusToken))}
-  <p style="color:#6b7280;font-size:13px;margin-top:24px;">Salam,<br><strong>IOM ITB</strong></p>
+  ${rendered.bodyHtml}
+  ${renderOrderStatusCta(data.orderStatusUrl)}
   ${renderEmailFooter()}
 </div>`,
-  attachments: [logoAttachment()],
-});
+    attachments: [logoAttachment()],
+  };
+};
 
 const buildTransactionProofReceivedEmail = ({ username, code, merchandiseName, qty, amount, transactionId, orderStatusToken, orderStatusUrl }) => ({
   subject: 'Bukti Pembayaran Diterima — IOM ITB',
