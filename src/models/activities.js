@@ -50,7 +50,12 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(20),
       allowNull: false,
       defaultValue: 'published'
-    }
+    },
+    contributors: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: []
+    },
   }, {
     sequelize,
     modelName: 'Activities',

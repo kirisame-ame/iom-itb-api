@@ -61,7 +61,7 @@ const UpdateActivities = async (id, body) => {
       });
     }
 
-    const { title, date, description, url, image, status, tags } = body;
+    const { title, date, description, url, image, status, tags, contributors } = body;
 
     if (!title && !date && !description && !url && !image && !status && tags === undefined) {
       throw new BaseError({
@@ -102,6 +102,7 @@ const UpdateActivities = async (id, body) => {
         date: date !== undefined ? date : activity.date,
         url: url !== undefined ? url : activity.url,
         status: status || activity.status,
+        contributors: contributors !== undefined ? contributors : activity.contributors,
       },
       { where: { id }, transaction }
     );

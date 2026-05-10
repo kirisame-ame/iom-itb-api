@@ -52,7 +52,7 @@ const CreateActivities = async (body) => {
   const transaction = await sequelize.transaction();
 
   try {
-    const { title, date, image, url, description, status, tags } = body;
+    const { title, date, image, url, description, status, tags, contributors } = body;
 
     if (!title || !date) {
       throw new BaseError({
@@ -86,6 +86,7 @@ const CreateActivities = async (body) => {
         date,
         url: url || '',
         status: status || 'draft',
+        contributors: contributors || [],
       },
       { transaction }
     );
