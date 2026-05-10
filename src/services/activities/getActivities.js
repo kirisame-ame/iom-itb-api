@@ -58,7 +58,8 @@ const GetActivities = async ({ slug = null, id = null, search = '', page = 1, li
     limit: pageLimit,
     offset,
     order: getOrder(),
-    include: [{ model: Tags, as: 'tags' }]
+    include: [{ model: Tags, as: 'tags' }],
+    distinct: true,
   };
 
   if (status && ['draft', 'published'].includes(status)) {
@@ -68,7 +69,16 @@ const GetActivities = async ({ slug = null, id = null, search = '', page = 1, li
   if (search) {
     options.where[Op.or] = [
       { title: { [Op.like]: `%${search}%` } },
-      { description: { [Op.like]: `%${search}%` } }
+      { description: { [Op.like]: `%${search}%` } },
+      { '$tags.name$': { [Op.like]: `%${search}%` } }
+    ];
+    options.subQuery = false;
+    options.include = [
+      {
+        model: Tags,
+        as: 'tags',
+        required: false, 
+      }
     ];
   }
 
