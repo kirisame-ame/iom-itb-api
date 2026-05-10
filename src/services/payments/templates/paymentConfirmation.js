@@ -3,6 +3,7 @@ const {
   LOGO_CID,
   buildOrderStatusUrl,
   renderOrderStatusCta,
+  renderEmailFooter,
 } = require('./emailLayout');
 const { DONATION_TYPE_LABEL } = require('../../../dtos/payments');
 
@@ -46,6 +47,7 @@ const buildDonationPaymentEmail = ({ name, amount, donationType, transactionId }
   </table>
   <p>Terima kasih atas kontribusi Anda kepada IOM ITB!</p>
   <p style="color:#6b7280;font-size:13px;margin-top:24px;">Salam,<br><strong>IOM ITB</strong></p>
+  ${renderEmailFooter()}
 </div>`,
   attachments: [logoAttachment()],
   };
@@ -79,6 +81,7 @@ const buildTransactionPaymentEmail = ({
   </table>
   ${renderOrderStatusCta(orderStatusUrl || buildOrderStatusUrl(orderStatusToken))}
   <p style="color:#6b7280;font-size:13px;margin-top:24px;">Salam,<br><strong>IOM ITB</strong></p>
+  ${renderEmailFooter()}
 </div>`,
   attachments: [logoAttachment()],
 });

@@ -125,8 +125,83 @@ const renderInvoiceHtml = ({ title, recipientLabel, recipientName, rows, grossAm
       </table>
       ${footer ? `<p style="margin: 20px 0 0; font-size: 13px; color: #6b7280;">${footer}</p>` : ''}
       ${renderOrderStatusCta(orderStatusUrl)}
-      <p style="margin: 24px 0 0; font-size: 12px; color: #9ca3af; text-align: center;">Email ini dikirim otomatis, mohon tidak membalas.</p>
+      <p style="margin: 24px 0 8px; font-size: 12px; color: #9ca3af; text-align: center;">
+        Email ini dikirim otomatis, mohon tidak membalas.
+      </p>
+      ${renderEmailFooter()}
     </div>
+  </div>
+`;
+
+const renderEmailFooter = () => `
+  <div style="margin-top:24px;padding-top:20px;border-top:1px solid #e5e7eb;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+      <tr>
+        
+        <td style="width:30%;vertical-align:middle;text-align:left;">
+          <img 
+            src="cid:${LOGO_CID}" 
+            alt="IOM ITB" 
+            style="max-width:110px;height:auto;display:block;"
+          />
+        </td>
+
+        <td style="width:40%;vertical-align:middle;text-align:center;">
+          <p style="margin:0;font-size:14px;color:#6b7280;font-weight:500;">
+            Ikatan Orangtua Mahasiswa ITB
+          </p>
+        </td>
+
+        <td style="width:30%;vertical-align:middle;text-align:right;white-space:nowrap;">
+
+          <a 
+            href="https://www.iom-itb.id/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style="display:inline-block;margin-left:10px;"
+          >
+            <img 
+              src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/googlechrome.svg"
+              alt="Website"
+              width="20"
+              height="20"
+              style="vertical-align:middle;"
+            />
+          </a>
+
+          <a 
+            href="https://www.instagram.com/iom_itb/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style="display:inline-block;margin-left:10px;"
+          >
+            <img 
+              src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/instagram.svg"
+              alt="Instagram"
+              width="20"
+              height="20"
+              style="vertical-align:middle;"
+            />
+          </a>
+
+          <a 
+            href="https://www.youtube.com/@IOM-ITB"
+            target="_blank"
+            rel="noopener noreferrer"
+            style="display:inline-block;margin-left:10px;"
+          >
+            <img 
+              src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/youtube.svg"
+              alt="YouTube"
+              width="20"
+              height="20"
+              style="vertical-align:middle;"
+            />
+          </a>
+
+        </td>
+      </tr>
+    </table>
   </div>
 `;
 
@@ -136,6 +211,7 @@ module.exports = {
   logoAttachment,
   renderInvoiceHtml,
   renderOrderStatusCta,
+  renderEmailFooter,
   buildOrderStatusUrl,
   formatIDR,
   formatDate,
