@@ -17,7 +17,7 @@ const UpdateMerchandises = async (id, body) => {
       });
     }
 
-    const { name, price, stock, image, link } = body;
+    const { name, price, stock, image, link, kategori } = body;
 
     if (!name && !price && !stock && !image && !link) {
       throw new BaseError({
@@ -35,6 +35,7 @@ const UpdateMerchandises = async (id, body) => {
         price: price !== undefined ? price : merchandise.price,
         stock: stock !== undefined ? stock : merchandise.stock,
         link: link ? link : merchandise.link,
+        kategori: kategori !== undefined ? kategori : merchandise.kategori,
       },
       {
         where: { id },

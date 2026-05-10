@@ -5,14 +5,14 @@ const CreateActivity = require('../services/activities/createActivities');
 const GetActivities = require('../services/activities/getActivities');
 const UpdateActivity = require('../services/activities/updateActivities');
 const DeleteActivity = require('../services/activities/deleteActivities');
-const { Activities } = require('../models');
+const { Activities, Tags } = require('../models');
+const { Op } = require('sequelize');
 
 const GetActivityBySlug = async (req, res) => {
   try {
-    const { slug } = req.params; // Mendapatkan id dari parameter URL
-    const activity = await GetActivities({ slug }); // Mengambil detail activity berdasarkan ID
+    const { slug } = req.params;
+    const activity = await GetActivities({ slug, status: 'published' });
 
-    // Jika activity tidak ditemukan, kembalikan respon 404
     if (!activity || activity.message) {
       return res.status(StatusCodes.NOT_FOUND).json(new BaseResponse({
         status: StatusCodes.NOT_FOUND,
@@ -20,7 +20,6 @@ const GetActivityBySlug = async (req, res) => {
       }));
     }
 
-    // Kembalikan data activity jika ditemukan
     res.status(StatusCodes.OK).json(new BaseResponse({
       status: StatusCodes.OK,
       message: 'Activity ditemukan',
@@ -35,12 +34,39 @@ const GetActivityBySlug = async (req, res) => {
   }
 };
 
-// Get all activities
 const GetAllActivities = async (req, res) => {
+  try {
+    const { search, page = 1, limit = 10, sort } = req.query;
+    const pageNumber = parseInt(page);
+    const pageLimit = Math.min(parseInt(limit), 50);
+    const activities = await GetActivities({
+      search,
+      page: pageNumber,
+      limit: pageLimit,
+      status: 'published',
+      sort,
+    });
+
+    const totalEntries = activities.total;
+    const totalPages = Math.ceil(totalEntries / pageLimit);
+    const start = (pageNumber - 1) * pageLimit + 1;
+    const end = Math.min(pageNumber * pageLimit, totalEntries);
+
+    res.status(StatusCodes.OK).json({
+      data: new DataTable(activities.data)?.data,
+      pagination: { currentPage: pageNumber, totalPages, start, end, totalEntries },
+    });
+  } catch (error) {
+    const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
+    res.status(status).json(new BaseResponse({ status, message: error.message }));
+  }
+};
+
+const GetAllActivitiesAdmin = async (req, res) => {
   try {
     const { search, page = 1, limit = 10, status, sort } = req.query;
     const pageNumber = parseInt(page);
-    const pageLimit = parseInt(limit);
+    const pageLimit = Math.min(parseInt(limit), 100);
     const activities = await GetActivities({
       search,
       page: pageNumber,
@@ -51,26 +77,16 @@ const GetAllActivities = async (req, res) => {
 
     const totalEntries = activities.total;
     const totalPages = Math.ceil(totalEntries / pageLimit);
-
     const start = (pageNumber - 1) * pageLimit + 1;
     const end = Math.min(pageNumber * pageLimit, totalEntries);
 
     res.status(StatusCodes.OK).json({
       data: new DataTable(activities.data)?.data,
-      pagination: {
-        currentPage: pageNumber,
-        totalPages,
-        start,
-        end,
-        totalEntries,
-      }
+      pagination: { currentPage: pageNumber, totalPages, start, end, totalEntries },
     });
   } catch (error) {
     const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
-    res.status(status).json(new BaseResponse({
-      status,
-      message: error.message,
-    }));
+    res.status(status).json(new BaseResponse({ status, message: error.message }));
   }
 };
 
@@ -90,12 +106,26 @@ const GetActivityCounts = async (req, res) => {
   }
 };
 
-// Create new activity
+const GetAllTags = async (req, res) => {
+  try {
+    const { search } = req.query;
+    const where = search ? { name: { [Op.like]: `%${search}%` } } : {};
+    const tags = await Tags.findAll({ where, order: [['name', 'ASC']] });
+    res.status(StatusCodes.OK).json(new BaseResponse({
+      status: StatusCodes.OK,
+      message: 'OK',
+      data: tags,
+    }));
+  } catch (error) {
+    const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
+    res.status(status).json(new BaseResponse({ status, message: error.message }));
+  }
+};
+
 const CreateNewActivity = async (req, res) => {
   try {
-    const { body } = req; // Data yang dikirim dari client (request body)
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const newActivity = await CreateActivity(body, baseUrl);
+    const { body } = req;
+    const newActivity = await CreateActivity(body);
 
     res.status(StatusCodes.CREATED).json(new BaseResponse({
       status: StatusCodes.CREATED,
@@ -111,11 +141,26 @@ const CreateNewActivity = async (req, res) => {
   }
 };
 
-// Update activity by ID
 const UpdateActivityById = async (req, res) => {
   try {
     const { id } = req.params;
     const { body } = req;
+
+    if (body.status === 'published') {
+      if (!body.image) {
+        return res.status(StatusCodes.BAD_REQUEST).json(new BaseResponse({
+          status: StatusCodes.BAD_REQUEST,
+          message: 'Thumbnail wajib diisi sebelum publish.',
+        }));
+      }
+      if (!body.contributors || body.contributors.length === 0) {
+        return res.status(StatusCodes.BAD_REQUEST).json(new BaseResponse({
+          status: StatusCodes.BAD_REQUEST,
+          message: 'Minimal 1 kontributor wajib diisi sebelum publish.',
+        }));
+      }
+    }
+    
     const updatedActivity = await UpdateActivity(id, body);
 
     res.status(StatusCodes.OK).json(new BaseResponse({
@@ -125,14 +170,10 @@ const UpdateActivityById = async (req, res) => {
     }));
   } catch (error) {
     const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
-    res.status(status).json(new BaseResponse({
-      status,
-      message: error.message,
-    }));
+    res.status(status).json(new BaseResponse({ status, message: error.message }));
   }
 };
 
-// Delete activity by ID
 const DeleteActivityById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -143,10 +184,7 @@ const DeleteActivityById = async (req, res) => {
     }));
   } catch (error) {
     const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
-    res.status(status).json(new BaseResponse({
-      status,
-      message: error.message,
-    }));
+    res.status(status).json(new BaseResponse({ status, message: error.message }));
   }
 };
 
@@ -174,9 +212,11 @@ const GetActivityById = async (req, res) => {
 module.exports = {
   GetActivityBySlug,
   GetAllActivities,
+  GetAllActivitiesAdmin,
   GetActivityById,
+  GetActivityCounts,
+  GetAllTags,
   CreateNewActivity,
   UpdateActivityById,
   DeleteActivityById,
-  GetActivityCounts
 };

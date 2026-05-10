@@ -1,13 +1,16 @@
-const { Activities, ActivityMedia } = require('../../models');
+const { Activities, Tags } = require('../../models');
 const { Op } = require('sequelize');
 
-const GetActivities = async ({ slug = null, id=null, search = '', page = 1, limit = 10, status = null, sort='newest' }) => {
+const GetActivities = async ({ slug = null, id = null, search = '', page = 1, limit = 10, status = null, sort = 'newest' }) => {
 
   if (id) {
     try {
       const activity = await Activities.findOne({
-        where: { id },
-        include: [{ model: ActivityMedia, as: 'media', order: [['order', 'ASC']] }]
+        where: {
+          id,
+          ...(status && { status }),
+        },
+        include: [{ model: Tags, as: 'tags' }]
       });
       if (!activity) return { message: `Activity tidak ditemukan` };
       return activity;
@@ -18,21 +21,18 @@ const GetActivities = async ({ slug = null, id=null, search = '', page = 1, limi
 
   if (slug) {
     try {
-      // Decode URL encoding dulu 
       const decodedSlug = decodeURIComponent(slug);
-      
-      // Cari by exact match
       const activity = await Activities.findOne({
         where: {
+          ...(status && { status }),
           [Op.or]: [
-            { url: slug },           // slug bersih: 'kegiatan-iom-2026', current approach
-            { url: decodedSlug },    // judul lama: 'Pengajuan Bantuan IOM-ITB...', old approach
-            { title: decodedSlug },  // fallback: cari by judul
+            { url: slug },
+            { url: decodedSlug },
+            { title: decodedSlug },
           ]
         },
-        include: [{ model: ActivityMedia, as: 'media', order: [['order', 'ASC']] }]
+        include: [{ model: Tags, as: 'tags' }]
       });
-
       if (!activity) return { message: `Kegiatan tidak ditemukan` };
       return activity;
     } catch (error) {
@@ -45,32 +45,40 @@ const GetActivities = async ({ slug = null, id=null, search = '', page = 1, limi
   const offset = (pageNumber - 1) * pageLimit;
 
   const getOrder = () => {
-  switch (sort) {
-    case 'oldest': return [['createdAt', 'ASC']];
-    case 'az': return [['title', 'ASC']];
-    case 'za': return [['title', 'DESC']];
-    default: return [['createdAt', 'DESC']]; // newest
-  }
-};
+    switch (sort) {
+      case 'oldest': return [['createdAt', 'ASC']];
+      case 'az': return [['title', 'ASC']];
+      case 'za': return [['title', 'DESC']];
+      default: return [['createdAt', 'DESC']];
+    }
+  };
 
   const options = {
     where: {},
     limit: pageLimit,
     offset,
     order: getOrder(),
-    include: [{ model: ActivityMedia, as: 'media', order: [['order', 'ASC']] }]
+    include: [{ model: Tags, as: 'tags' }],
+    distinct: true,
   };
 
-  // Filter by status
   if (status && ['draft', 'published'].includes(status)) {
     options.where.status = status;
   }
 
-  // Search by judul atau konten
   if (search) {
     options.where[Op.or] = [
       { title: { [Op.like]: `%${search}%` } },
-      { description: { [Op.like]: `%${search}%` } }
+      { description: { [Op.like]: `%${search}%` } },
+      { '$tags.name$': { [Op.like]: `%${search}%` } }
+    ];
+    options.subQuery = false;
+    options.include = [
+      {
+        model: Tags,
+        as: 'tags',
+        required: false, 
+      }
     ];
   }
 

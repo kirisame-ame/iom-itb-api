@@ -5,6 +5,12 @@ const { StatusCodes } = require('http-status-codes');
 const db = require('../models');
 const BaseResponse = require('../schemas/responses/BaseResponse');
 const triggerWhatsappNotification = require('../services/tallyWebhooks/triggerWhatsappNotificationStub');
+const sendEmail = require('../utils/mailer');
+
+const {
+  renderPengajuanStatusHtml,
+  logoAttachment,
+} = require('../utils/emailBantuan');
 
 const ALLOWED_FORM_SLUGS = ['pendaftaran_anggota', 'pengajuan_bantuan', 'orang_tua_asuh'];
 
@@ -20,6 +26,12 @@ const STATUS_ALIASES = {
   DITOLAK: 'KEPUTUSAN_DITOLAK',
   'KEPUTUSAN AKHIR DITERIMA': 'KEPUTUSAN_DITERIMA',
   'KEPUTUSAN AKHIR DITOLAK': 'KEPUTUSAN_DITOLAK',
+};
+const STATUS_LABELS = {
+  VERIFIKASI_BERKAS: 'Sedang Dalam Proses Verifikasi Berkas',
+  DIPANGGIL_WAWANCARA: 'Dipanggil Wawancara',
+  KEPUTUSAN_DITERIMA: 'Keputusan Akhir Diterima',
+  KEPUTUSAN_DITOLAK: 'Keputusan Akhir Ditolak',
 };
 
 function normalizeStatus(inputStatus) {
@@ -39,6 +51,41 @@ function normalizePagination(query) {
     page: Number.isNaN(page) || page < 1 ? 1 : page,
     limit: Number.isNaN(limit) || limit < 1 ? 10 : Math.min(limit, 100),
   };
+}
+
+function buildStatusMessage({
+  nama,
+  tallySubmissionId,
+  status,
+  catatan,
+}) {
+  const statusLabel =
+    STATUS_LABELS[status] || status || 'TIDAK DIKETAHUI';
+
+  const lines = [
+    `Halo${nama ? ` ${nama}` : ''},`,
+    '',
+    'Status pengajuan bantuan Anda telah diperbarui.',
+    '',
+    `ID Pengajuan : ${tallySubmissionId}`,
+    `Status       : ${statusLabel}`,
+  ];
+
+  if (catatan) {
+    lines.push(`Catatan     : ${catatan}`);
+  }
+
+  lines.push(
+    '',
+    'Silakan login ke sistem untuk melihat detail pengajuan Anda.',
+    '',
+    'Mohon untuk tidak membalas email ini.',
+    '',
+    'Terima kasih.',
+    'Tim Pengajuan Bantuan'
+  );
+
+  return lines.join('\n');
 }
 
 const ListTallySubmissionsByForm = async (req, res) => {
@@ -294,6 +341,50 @@ const UpdatePengajuanBantuanStatus = async (req, res) => {
           message: 'Pengajuan bantuan submission not found',
         }),
       );
+    }
+
+    if (!result.unchanged) {
+      const payload =
+        typeof result.submission?.payload === 'string'
+          ? JSON.parse(result.submission.payload)
+          : result.submission?.payload;
+
+      const email = payload?.answersByLabel?.Email;
+      const nama = payload?.answersByLabel?.Nama;
+
+      if (email) {
+        const subject = 'Update Status Pengajuan Bantuan';
+
+        const textMessage = buildStatusMessage({
+          nama,
+          tallySubmissionId,
+          status: result.statusRow.currentStatus,
+          catatan: result.statusRow.catatan,
+        });
+
+        const htmlMessage = renderPengajuanStatusHtml({
+          recipientName: nama,
+          tallySubmissionId,
+          status: result.statusRow.currentStatus,
+          catatan: result.statusRow.catatan,
+          updatedAt: result.statusRow.updatedAt,
+        });
+
+        try {
+          await sendEmail({
+            to: email,
+            subject,
+            html: htmlMessage,
+            text: textMessage,
+            attachments: [logoAttachment()],
+          });
+        } catch (err) {
+          console.warn(
+            '[Email] Failed to send status update:',
+            err.message
+          );
+        }
+      }
     }
 
     return res.status(StatusCodes.OK).json(

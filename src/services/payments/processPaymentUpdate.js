@@ -48,12 +48,8 @@ const notifyDonationPaid = async (donation, transactionId) => {
   }
 
   if (donation.email) {
-    tasks.push(
-      sendNotificationEmail(
-        donation.email,
-        buildDonationPaymentEmail(confirmationPayload)
-      )
-    );
+    const email = await buildDonationPaymentEmail(confirmationPayload);
+    tasks.push(sendNotificationEmail(donation.email, email));
   }
 
   await Promise.allSettled(tasks);
@@ -70,6 +66,7 @@ const notifyTransactionPaid = async (trx, transactionId) => {
 
   if (trx.noTelp) {
     const message = `Halo ${trx.username}!\n\nPembayaran pesanan Anda telah berhasil!\n\nKode Pesanan: ${confirmationPayload.code}\nProduk: ${confirmationPayload.merchandiseName} x ${trx.qty}\nTotal: Rp ${confirmationPayload.amount}\n\nPesanan Anda sedang diproses. Pantau status pesanan melalui tautan berikut:\n${orderStatusUrl}\n\nSalam,\nIOM ITB`;
+
     tasks.push(
       sendWhatsApp(
         trx.noTelp,
@@ -81,18 +78,16 @@ const notifyTransactionPaid = async (trx, transactionId) => {
   }
 
   if (trx.email) {
-    tasks.push(
-      sendNotificationEmail(
-        trx.email,
-        buildTransactionPaymentEmail({
-          ...confirmationPayload,
-          orderStatusUrl,
-        })
-      )
-    );
+    const email = await buildTransactionPaymentEmail({
+      ...confirmationPayload,
+      orderStatusUrl,
+    });
+
+    tasks.push(sendNotificationEmail(trx.email, email));
   }
 
-  await Promise.allSettled(tasks);
+  const results = await Promise.allSettled(tasks);
+  console.log('TRANSACTION NOTIFICATION RESULTS:', results);
 };
 
 /**
