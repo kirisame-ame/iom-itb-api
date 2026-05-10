@@ -8,6 +8,7 @@ const {
   DeleteActivityById,
   GetActivityById,
   GetActivityCounts,
+  GetAllTags
 } = require('../controllers/activities');
  const JWTValidation = require('../middlewares/auth');
 const { Activities } = require('../models');

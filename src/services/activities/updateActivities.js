@@ -11,11 +11,22 @@ const sanitizeDescription = (html) => {
       'ul', 'ol', 'li', 'img', 'a', 'br'
     ],
     allowedAttributes: {
-      'img': ['src', 'alt'],
-      'a': ['href', 'target', 'rel']
+      'img': ['src', 'alt', 'style'],   
+      'a': ['href', 'target', 'rel'],
+      'p': ['style'],                  
+      'h1': ['style'],
+      'h2': ['style'],
+      'h3': ['style'],
+    },
+    allowedStyles: {
+      '*': {
+        'text-align': [/^left$/, /^right$/, /^center$/, /^justify$/],
+        'width': [/^\d+(%|px)$/],
+        'height': [/.*/],
+      },
     },
     allowedSchemesByTag: {
-      'img': ['https'],
+      'img': ['https', 'http'],
       'a': ['https']
     },
     transformTags: {
