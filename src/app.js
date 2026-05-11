@@ -46,24 +46,31 @@ const swaggerOption = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'API IOM',
+      title: 'API IOM (Latest)',
       version: '1.0.0',
-      description: 'Description of API IOM',
+      description: 'API Documentation for IOM ITB',
     },
     servers: [
       {
-        url: process.env.BASE_URL || 'http://localhost:3000',
+        url: process.env.API_UPLOAD_URL || process.env.SERVICE_URL_APP || process.env.BASE_URL || 'https://iom-api.kirisame.jp.net',
+        description: 'Production Server',
       },
     ],
   },
-  apis: ['./src/routes/swagger/*.js', './openapi.yml'],
+  apis: [
+    path.join(__dirname, 'routes/swagger/*.js'),
+    path.join(__dirname, '../openapi.yml'),
+  ],
 };
 
 const swaggerSpec = swaggerJsDoc(swaggerOption);
 app.use(
   '/api',
   swaggerUi.serve,
-  swaggerUi.setup(swaggerSpec),
+  swaggerUi.setup(swaggerSpec, {
+    explorer: true,
+    customSiteTitle: 'IOM ITB API Documentation',
+  }),
 );
 
 app.use(morgan('dev'));
@@ -116,8 +123,6 @@ app.get('/', (req, res) => {
 // forgotPasswordJob.start();
 const { broadcastJob } = require('./utils/cron');
 broadcastJob.start();
-
-app.use(router);
 
 // const endpoints = expressListEndpoints(app);
 // console.log(endpoints);
