@@ -79,17 +79,6 @@ class PaymentNotificationDto {
       ? raw.va_numbers[0].va_number
       : null;
 
-    let paidAt = null;
-    if (isPaid) {
-      if (raw.settlement_time) {
-        const jakartaDate = new Date(raw.settlement_time);
-        jakartaDate.setHours(jakartaDate.getHours() - 7);
-        paidAt = jakartaDate;
-      } else {
-        paidAt = new Date();
-      }
-    }
-
     const dto = new PaymentNotificationDto({
       orderId: raw.order_id,
       scope: PaymentNotificationDto.scopeFromOrderId(raw.order_id),
@@ -100,7 +89,7 @@ class PaymentNotificationDto {
       grossAmount: raw.gross_amount,
       paymentType: raw.payment_type,
       vaNumber,
-      paidAt,
+      paidAt: isPaid ? (raw.settlement_time ? new Date(raw.settlement_time) : new Date()) : null,
       isPaid,
       isFailed,
       raw,
