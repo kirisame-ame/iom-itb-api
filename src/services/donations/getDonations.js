@@ -66,14 +66,7 @@ const GetDonations = async ({ id = null, query = {}, search = '', isAdmin = fals
     order: orderBy,
   };
 
-  if (isAdmin) {
-    options.include = [{
-      model: require('../../models').Faculties,
-      as: 'faculty',
-      attributes: ['id', 'name', 'kodeUnik'],
-      required: false,
-    }];
-  } else {
+  if (!isAdmin) {
     options.attributes = ['name', 'amount', 'date', 'options'];
   }
 
