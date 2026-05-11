@@ -50,9 +50,11 @@
  *               picPhone:
  *                 type: string
  *               logo:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *               file:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *               mou:
  *                 type: string
  *                 description: Path to MOU file
@@ -104,9 +106,11 @@
  *               picPhone:
  *                 type: string
  *               logo:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *               file:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *               mou:
  *                 type: string
  *     responses:

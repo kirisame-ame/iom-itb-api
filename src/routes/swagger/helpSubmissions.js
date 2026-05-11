@@ -49,7 +49,8 @@
  *               message:
  *                 type: string
  *               file:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       201:
  *         description: Help submission created
@@ -100,7 +101,8 @@
  *               status:
  *                 type: string
  *               file:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       200:
  *         description: Help submission updated

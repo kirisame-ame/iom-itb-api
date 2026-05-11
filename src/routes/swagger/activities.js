@@ -55,7 +55,8 @@
  *                 type: string
  *                 example: active
  *               image:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *               tags:
  *                 type: string
  *                 description: Comma-separated tag names
@@ -189,7 +190,8 @@
  *               status:
  *                 type: string
  *               image:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *               tags:
  *                 type: string
  *     responses:

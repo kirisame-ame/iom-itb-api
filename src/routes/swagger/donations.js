@@ -58,7 +58,8 @@
  *               facultyId:
  *                 type: string
  *               proof:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       201:
  *         description: Donation created
@@ -147,7 +148,8 @@
  *               paymentStatus:
  *                 type: string
  *               proof:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       200:
  *         description: Donation updated

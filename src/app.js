@@ -44,25 +44,25 @@ const app = express();
 
 const swaggerOption = {
   definition: {
-    openapi: '3.1.0',
+    openapi: '3.0.0',
     info: {
       title: 'API IOM',
       version: '1.0.0',
       description: 'Description of API IOM',
     },
-    server: [
+    servers: [
       {
-        uri: process.env.BASE_URL,
+        url: process.env.BASE_URL || 'http://localhost:3000',
       },
     ],
   },
-  apis: ['./src/routes/swagger/*.js'],
+  apis: ['./src/routes/swagger/*.js', './openapi.yml'],
 };
 
 const swaggerSpec = swaggerJsDoc(swaggerOption);
 app.use(
   '/api',
-  swaggerUi.serveFiles(swaggerSpec),
+  swaggerUi.serve,
   swaggerUi.setup(swaggerSpec),
 );
 
@@ -96,7 +96,12 @@ app.use(express.json());
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-app.use('/', express.static(path.join(__dirname, '')));
+const serveStatic = (req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  express.static(path.join(__dirname, ''))(req, res, next);
+};
+
+app.use('/', serveStatic);
 
 app.use('/email-templates', require('./routes/emailTemplate'));
 app.use(router);

@@ -123,7 +123,8 @@
  *               - date
  *             properties:
  *               banner:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *               name:
  *                 type: string
  *                 example: Programming Challenge
@@ -221,7 +222,8 @@
  *               phoneNumber:
  *                 type: string
  *               supportingDocuments:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *               isTeam:
  *                 type: boolean
  *               teamSize:

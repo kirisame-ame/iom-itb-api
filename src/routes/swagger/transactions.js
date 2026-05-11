@@ -64,7 +64,8 @@
  *               paymentMethod:
  *                 type: string
  *               payment:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       201:
  *         description: Transaction created
@@ -131,7 +132,8 @@
  *               paymentStatus:
  *                 type: string
  *               payment:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       200:
  *         description: Transaction updated

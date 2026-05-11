@@ -54,9 +54,11 @@
  *                 type: string
  *                 example: 08123456789
  *               picture:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *               file:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       201:
  *         description: Member created
@@ -105,9 +107,11 @@
  *               noWhatsapp:
  *                 type: string
  *               picture:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *               file:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       200:
  *         description: Member updated

@@ -12,7 +12,8 @@
  *             type: object
  *             properties:
  *               image:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *                 description: Image file to upload (jpeg, png, gif, webp)
  *     responses:
  *       200:

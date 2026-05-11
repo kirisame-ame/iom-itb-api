@@ -50,7 +50,8 @@
  *               kemitraanId:
  *                 type: string
  *               image:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       201:
  *         description: Kegiatan created
@@ -87,7 +88,8 @@
  *               kemitraanId:
  *                 type: string
  *               image:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       200:
  *         description: Kegiatan updated

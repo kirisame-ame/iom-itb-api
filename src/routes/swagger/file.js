@@ -12,7 +12,8 @@
  *             type: object
  *             properties:
  *               file:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *                 description: File to upload
  *     responses:
  *       200:
@@ -69,7 +70,8 @@
  *             type: object
  *             properties:
  *               image:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *                 description: Image file to upload
  *     responses:
  *       200:

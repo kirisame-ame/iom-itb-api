@@ -79,7 +79,8 @@
  *                 type: string
  *                 example: Busana
  *               image:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       201:
  *         description: Merchandise created
@@ -132,7 +133,8 @@
  *               kategori:
  *                 type: string
  *               image:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       200:
  *         description: Merchandise updated

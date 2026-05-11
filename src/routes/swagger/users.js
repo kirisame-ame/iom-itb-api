@@ -55,7 +55,8 @@
  *                 type: string
  *                 example: 08123456789
  *               photo:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       201:
  *         description: User created successfully
@@ -105,7 +106,8 @@
  *               phone:
  *                 type: string
  *               photo:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       200:
  *         description: User updated successfully

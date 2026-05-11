@@ -102,7 +102,8 @@
  *                 type: string
  *                 example: Bandung
  *               image:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *               institutionName:
  *                 type: string
  *                 example: Universitas Pasundan
@@ -113,7 +114,8 @@
  *                 type: string
  *                 example: 203040111
  *               proof:
- *                 type: file
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       200:
  *         description: User registered successfully
