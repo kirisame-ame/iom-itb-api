@@ -1,6 +1,7 @@
-const { BroadcastSettings, BroadcastLogs, Members } = require('../../models');
+const { BroadcastSettings, BroadcastLogs } = require('../../models');
 const sendWhatsApp = require('../../utils/whatsapp');
 const sendEmail = require('../../utils/mailer');
+const getBroadcastRecipients = require('./getBroadcastRecipients');
 
 const buildMessage = (template, name, jenisIuran) => {
   return template
@@ -15,19 +16,17 @@ const runBroadcast = async (settingId) => {
   const sentAt = new Date();
   const logs = [];
 
-  // Use recipients from setting; if empty, fall back to all members with noWhatsapp
+  // Use recipients from setting; if empty, fall back to all users with Biodates
   let recipients = setting.recipients || [];
   if (!recipients.length) {
-    const members = await Members.findAll({ where: {}, attributes: ['id', 'parentName', 'noWhatsapp', 'options'] });
-    recipients = members.map((m) => ({
-      name: m.parentName,
-      noWhatsapp: m.noWhatsapp,
-      email: m.options?.email || null,
-    }));
+    recipients = await getBroadcastRecipients();
   }
 
   for (const recipient of recipients) {
     const { name, noWhatsapp, email } = recipient;
+    // Ensure we don't send to users with completely empty contacts
+    if (!noWhatsapp && !email) continue;
+
     const message = buildMessage(setting.template, name || 'Anggota', setting.jenisIuran);
     const idempotencyKey = `broadcast-${settingId}-${sentAt.toISOString().slice(0, 10)}-${noWhatsapp || email}`;
 

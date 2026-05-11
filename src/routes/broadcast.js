@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { BroadcastSettings, BroadcastLogs, sequelize } = require('../models');
+const { BroadcastSettings, BroadcastLogs } = require('../models');
 const createBroadcastSetting = require('../services/broadcast/createBroadcastSetting');
 const updateBroadcastSetting = require('../services/broadcast/updateBroadcastSetting');
 const deleteBroadcastSetting = require('../services/broadcast/deleteBroadcastSetting');
 const runBroadcast = require('../services/broadcast/runBroadcast');
+const getBroadcastRecipients = require('../services/broadcast/getBroadcastRecipients');
 
 // GET /broadcast/settings
 router.get('/settings', async (req, res) => {
@@ -84,20 +85,7 @@ router.get('/logs', async (req, res) => {
 // GET /broadcast/members — list members with WA & email
 router.get('/members', async (req, res) => {
   try {
-    const [rows] = await sequelize.query(`
-      SELECT u.id, u.email,
-             CONCAT(COALESCE(b.firstName,''), ' ', COALESCE(b.lastName,'')) AS name,
-             b.phone AS noWhatsapp
-      FROM Users u
-      LEFT JOIN Biodates b ON u.biodateId = b.id
-      ORDER BY name ASC
-    `);
-    const data = rows.map((r) => ({
-      id: r.id,
-      name: r.name?.trim() || '-',
-      noWhatsapp: r.noWhatsapp || null,
-      email: r.email || null,
-    }));
+    const data = await getBroadcastRecipients();
     res.json({ data });
   } catch (err) {
     res.status(500).json({ message: err.message });
