@@ -29,6 +29,44 @@
  *       500:
  *         description: Internal Server Error
  *
+ *   post:
+ *     security:
+ *       - bearerAuth: []
+ *     summary: Create new activity
+ *     tags: [Activities]
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 example: Workshop Coding
+ *               date:
+ *                 type: string
+ *                 format: date
+ *                 example: 2024-07-20
+ *               description:
+ *                 type: string
+ *               url:
+ *                 type: string
+ *               status:
+ *                 type: string
+ *                 example: active
+ *               image:
+ *                 type: file
+ *               tags:
+ *                 type: string
+ *                 description: Comma-separated tag names
+ *     responses:
+ *       201:
+ *         description: Activity created
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal Server Error
+ *
  * /activities/tags:
  *   get:
  *     summary: Get all activity tags
@@ -116,45 +154,6 @@
  *     responses:
  *       200:
  *         description: Activity counts
- *       401:
- *         description: Unauthorized
- *       500:
- *         description: Internal Server Error
- *
- * /activities:
- *   post:
- *     security:
- *       - bearerAuth: []
- *     summary: Create new activity
- *     tags: [Activities]
- *     requestBody:
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             properties:
- *               title:
- *                 type: string
- *                 example: Workshop Coding
- *               date:
- *                 type: string
- *                 format: date
- *                 example: 2024-07-20
- *               description:
- *                 type: string
- *               url:
- *                 type: string
- *               status:
- *                 type: string
- *                 example: active
- *               image:
- *                 type: file
- *               tags:
- *                 type: string
- *                 description: Comma-separated tag names
- *     responses:
- *       201:
- *         description: Activity created
  *       401:
  *         description: Unauthorized
  *       500:
