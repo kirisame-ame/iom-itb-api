@@ -17,7 +17,7 @@ const UpdateDonations = async (id, body) => {
       });
     }
 
-    const { name, email, noWhatsapp, notification, proof, amount, date, bank, donationType, facultyId } = body;
+    const { name, email, noWhatsapp, notification, proof, amount, date, bank, donationType, facultyId, paymentMethod, paymentStatus } = body;
     const nameIsHidden = body.nameIsHidden;
     const isHambaAllah = body.isHambaAllah;
     const hasAmountUpdate = amount !== undefined && amount !== null && amount !== '';
@@ -25,10 +25,10 @@ const UpdateDonations = async (id, body) => {
     const nextFacultyId = hasFacultyUpdate ? facultyId : donation.facultyId;
     let amountBreakdown = null;
 
-    if (!name && !email && !noWhatsapp && !notification && !proof && nameIsHidden === undefined && !hasAmountUpdate && !date && !bank && isHambaAllah === undefined && donationType === undefined && facultyId === undefined) {
+    if (!name && !email && !noWhatsapp && !notification && !proof && nameIsHidden === undefined && !hasAmountUpdate && !date && !bank && isHambaAllah === undefined && donationType === undefined && facultyId === undefined && paymentMethod === undefined && paymentStatus === undefined) {
       throw new BaseError({
         status: StatusCodes.BAD_REQUEST,
-        message: 'At least one field (name, email, noWhatsapp, notification, amount, proof, or nameIsHidden) must be provided for update',
+        message: 'At least one field must be provided for update',
       });
     }
 
@@ -60,6 +60,8 @@ const UpdateDonations = async (id, body) => {
         },
         date: date || donation.date,
         bank: bank || donation.bank,
+        paymentMethod: paymentMethod !== undefined ? paymentMethod : donation.paymentMethod,
+        paymentStatus: paymentStatus !== undefined ? paymentStatus : donation.paymentStatus,
       },
       {
         where: { id },
