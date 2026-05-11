@@ -1,29 +1,10 @@
 /**
  * @swagger
  *
- * /merchandises/categories:
+ * /help-submissions:
  *   get:
- *     summary: Get merchandise categories
- *     tags: [Merchandise]
- *     responses:
- *       200:
- *         description: List of categories
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 data:
- *                   type: array
- *                   items:
- *                     type: string
- *       500:
- *         description: Internal Server Error
- *
- * /merchandises:
- *   get:
- *     summary: Get all merchandise
- *     tags: [Merchandise]
+ *     summary: Get all help submissions
+ *     tags: [HelpSubmissions]
  *     parameters:
  *       - in: query
  *         name: page
@@ -44,52 +25,41 @@
  *           type: string
  *     responses:
  *       200:
- *         description: A list of merchandise
+ *         description: A list of help submissions
  *       500:
  *         description: Internal Server Error
  *
  *   post:
- *     summary: Create new merchandise
- *     tags: [Merchandise]
+ *     summary: Create new help submission
+ *     tags: [HelpSubmissions]
  *     requestBody:
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
- *             required:
- *               - name
- *               - price
  *             properties:
  *               name:
  *                 type: string
- *                 example: T-Shirt
- *               description:
+ *                 example: John Doe
+ *               email:
  *                 type: string
- *                 example: Cool t-shirt
- *               price:
- *                 type: number
- *                 example: 100000
- *               stock:
- *                 type: integer
- *                 example: 100
- *               link:
+ *                 example: john@example.com
+ *               subject:
  *                 type: string
- *                 example: https://example.com
- *               kategori:
+ *               message:
  *                 type: string
- *                 example: Busana
- *               image:
+ *               file:
  *                 type: file
  *     responses:
  *       201:
- *         description: Merchandise created
+ *         description: Help submission created
  *       500:
  *         description: Internal Server Error
  *
- * /merchandises/{id}:
+ * /help-submissions/{id}:
  *   get:
- *     summary: Get merchandise by ID
- *     tags: [Merchandise]
+ *     summary: Get help submission by ID
+ *     tags: [HelpSubmissions]
  *     parameters:
  *       - in: path
  *         name: id
@@ -98,15 +68,15 @@
  *           type: string
  *     responses:
  *       200:
- *         description: Merchandise detail
+ *         description: Help submission detail
  *       404:
  *         description: Not found
  *       500:
  *         description: Internal Server Error
  *
  *   put:
- *     summary: Update merchandise
- *     tags: [Merchandise]
+ *     summary: Update help submission
+ *     tags: [HelpSubmissions]
  *     parameters:
  *       - in: path
  *         name: id
@@ -115,33 +85,31 @@
  *           type: string
  *     requestBody:
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
  *               name:
  *                 type: string
- *               description:
+ *               email:
  *                 type: string
- *               price:
- *                 type: number
- *               stock:
- *                 type: integer
- *               link:
+ *               subject:
  *                 type: string
- *               kategori:
+ *               message:
  *                 type: string
- *               image:
+ *               status:
+ *                 type: string
+ *               file:
  *                 type: file
  *     responses:
  *       200:
- *         description: Merchandise updated
+ *         description: Help submission updated
  *       500:
  *         description: Internal Server Error
  *
  *   delete:
- *     summary: Delete merchandise
- *     tags: [Merchandise]
+ *     summary: Delete help submission
+ *     tags: [HelpSubmissions]
  *     parameters:
  *       - in: path
  *         name: id
@@ -150,7 +118,7 @@
  *           type: string
  *     responses:
  *       200:
- *         description: Merchandise deleted
+ *         description: Help submission deleted
  *       404:
  *         description: Not found
  *       500:

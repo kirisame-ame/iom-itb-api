@@ -1,29 +1,10 @@
 /**
  * @swagger
  *
- * /merchandises/categories:
+ * /kemitraan:
  *   get:
- *     summary: Get merchandise categories
- *     tags: [Merchandise]
- *     responses:
- *       200:
- *         description: List of categories
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 data:
- *                   type: array
- *                   items:
- *                     type: string
- *       500:
- *         description: Internal Server Error
- *
- * /merchandises:
- *   get:
- *     summary: Get all merchandise
- *     tags: [Merchandise]
+ *     summary: Get all kemitraan
+ *     tags: [Kemitraan]
  *     parameters:
  *       - in: query
  *         name: page
@@ -44,52 +25,47 @@
  *           type: string
  *     responses:
  *       200:
- *         description: A list of merchandise
+ *         description: A list of kemitraan
  *       500:
  *         description: Internal Server Error
  *
  *   post:
- *     summary: Create new merchandise
- *     tags: [Merchandise]
+ *     summary: Create new kemitraan
+ *     tags: [Kemitraan]
  *     requestBody:
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             required:
  *               - name
- *               - price
  *             properties:
  *               name:
  *                 type: string
- *                 example: T-Shirt
+ *                 example: PT ABC
  *               description:
  *                 type: string
- *                 example: Cool t-shirt
- *               price:
- *                 type: number
- *                 example: 100000
- *               stock:
- *                 type: integer
- *                 example: 100
- *               link:
+ *               picName:
  *                 type: string
- *                 example: https://example.com
- *               kategori:
+ *               picPhone:
  *                 type: string
- *                 example: Busana
- *               image:
+ *               logo:
  *                 type: file
+ *               file:
+ *                 type: file
+ *               mou:
+ *                 type: string
+ *                 description: Path to MOU file
  *     responses:
  *       201:
- *         description: Merchandise created
+ *         description: Kemitraan created
  *       500:
  *         description: Internal Server Error
  *
- * /merchandises/{id}:
+ * /kemitraan/{id}:
  *   get:
- *     summary: Get merchandise by ID
- *     tags: [Merchandise]
+ *     summary: Get kemitraan by ID
+ *     tags: [Kemitraan]
  *     parameters:
  *       - in: path
  *         name: id
@@ -98,15 +74,15 @@
  *           type: string
  *     responses:
  *       200:
- *         description: Merchandise detail
+ *         description: Kemitraan detail
  *       404:
  *         description: Not found
  *       500:
  *         description: Internal Server Error
  *
  *   put:
- *     summary: Update merchandise
- *     tags: [Merchandise]
+ *     summary: Update kemitraan
+ *     tags: [Kemitraan]
  *     parameters:
  *       - in: path
  *         name: id
@@ -115,7 +91,7 @@
  *           type: string
  *     requestBody:
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
@@ -123,25 +99,25 @@
  *                 type: string
  *               description:
  *                 type: string
- *               price:
- *                 type: number
- *               stock:
- *                 type: integer
- *               link:
+ *               picName:
  *                 type: string
- *               kategori:
+ *               picPhone:
  *                 type: string
- *               image:
+ *               logo:
  *                 type: file
+ *               file:
+ *                 type: file
+ *               mou:
+ *                 type: string
  *     responses:
  *       200:
- *         description: Merchandise updated
+ *         description: Kemitraan updated
  *       500:
  *         description: Internal Server Error
  *
  *   delete:
- *     summary: Delete merchandise
- *     tags: [Merchandise]
+ *     summary: Delete kemitraan
+ *     tags: [Kemitraan]
  *     parameters:
  *       - in: path
  *         name: id
@@ -150,7 +126,7 @@
  *           type: string
  *     responses:
  *       200:
- *         description: Merchandise deleted
+ *         description: Kemitraan deleted
  *       404:
  *         description: Not found
  *       500:

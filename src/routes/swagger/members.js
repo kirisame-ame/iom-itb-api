@@ -1,29 +1,10 @@
 /**
  * @swagger
  *
- * /merchandises/categories:
+ * /members:
  *   get:
- *     summary: Get merchandise categories
- *     tags: [Merchandise]
- *     responses:
- *       200:
- *         description: List of categories
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 data:
- *                   type: array
- *                   items:
- *                     type: string
- *       500:
- *         description: Internal Server Error
- *
- * /merchandises:
- *   get:
- *     summary: Get all merchandise
- *     tags: [Merchandise]
+ *     summary: Get all members
+ *     tags: [Members]
  *     parameters:
  *       - in: query
  *         name: page
@@ -44,52 +25,48 @@
  *           type: string
  *     responses:
  *       200:
- *         description: A list of merchandise
+ *         description: A list of members
  *       500:
  *         description: Internal Server Error
  *
  *   post:
- *     summary: Create new merchandise
- *     tags: [Merchandise]
+ *     summary: Create new member
+ *     tags: [Members]
  *     requestBody:
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             required:
- *               - name
- *               - price
+ *               - code
+ *               - childNim
  *             properties:
- *               name:
+ *               code:
  *                 type: string
- *                 example: T-Shirt
- *               description:
+ *                 example: MBR001
+ *               parentName:
  *                 type: string
- *                 example: Cool t-shirt
- *               price:
- *                 type: number
- *                 example: 100000
- *               stock:
- *                 type: integer
- *                 example: 100
- *               link:
+ *                 example: John Parent
+ *               childNim:
  *                 type: string
- *                 example: https://example.com
- *               kategori:
+ *                 example: 203040111
+ *               noWhatsapp:
  *                 type: string
- *                 example: Busana
- *               image:
+ *                 example: 08123456789
+ *               picture:
+ *                 type: file
+ *               file:
  *                 type: file
  *     responses:
  *       201:
- *         description: Merchandise created
+ *         description: Member created
  *       500:
  *         description: Internal Server Error
  *
- * /merchandises/{id}:
+ * /members/{id}:
  *   get:
- *     summary: Get merchandise by ID
- *     tags: [Merchandise]
+ *     summary: Get member by ID
+ *     tags: [Members]
  *     parameters:
  *       - in: path
  *         name: id
@@ -98,15 +75,15 @@
  *           type: string
  *     responses:
  *       200:
- *         description: Merchandise detail
+ *         description: Member detail
  *       404:
  *         description: Not found
  *       500:
  *         description: Internal Server Error
  *
  *   put:
- *     summary: Update merchandise
- *     tags: [Merchandise]
+ *     summary: Update member
+ *     tags: [Members]
  *     parameters:
  *       - in: path
  *         name: id
@@ -115,33 +92,31 @@
  *           type: string
  *     requestBody:
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
- *               name:
+ *               code:
  *                 type: string
- *               description:
+ *               parentName:
  *                 type: string
- *               price:
- *                 type: number
- *               stock:
- *                 type: integer
- *               link:
+ *               childNim:
  *                 type: string
- *               kategori:
+ *               noWhatsapp:
  *                 type: string
- *               image:
+ *               picture:
+ *                 type: file
+ *               file:
  *                 type: file
  *     responses:
  *       200:
- *         description: Merchandise updated
+ *         description: Member updated
  *       500:
  *         description: Internal Server Error
  *
  *   delete:
- *     summary: Delete merchandise
- *     tags: [Merchandise]
+ *     summary: Delete member
+ *     tags: [Members]
  *     parameters:
  *       - in: path
  *         name: id
@@ -150,7 +125,7 @@
  *           type: string
  *     responses:
  *       200:
- *         description: Merchandise deleted
+ *         description: Member deleted
  *       404:
  *         description: Not found
  *       500:
