@@ -1,15 +1,14 @@
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
-if (!process.env.TZ) {
-  process.env.TZ = 'UTC';
-}
-
-const dialectOptions = {
-  dateStrings: true,
-  typeCast: true,
-  timezone: '+00:00',
-};
+// Debug environment variables
+console.log('=== Database Config Debug ===');
+console.log('DB_USERNAME:', process.env.DB_USERNAME);
+console.log('DB_PASSWORD:', process.env.DB_PASSWORD ? '***' : 'undefined');
+console.log('DB_DATABASE:', process.env.DB_DATABASE);
+console.log('DB_HOST:', process.env.DB_HOST);
+console.log('DB_PORT:', process.env.DB_PORT);
+console.log('NODE_ENV:', process.env.NODE_ENV);
 
 module.exports = {
   development: {
@@ -19,8 +18,6 @@ module.exports = {
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
     dialect: 'mysql',
-    dialectOptions,
-    timezone: '+00:00',
   },
   test: {
     username: process.env.DB_USERNAME,
@@ -29,8 +26,6 @@ module.exports = {
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
     dialect: 'mysql',
-    dialectOptions,
-    timezone: '+00:00',
   },
   production: {
     username: process.env.DB_USERNAME,
@@ -39,8 +34,6 @@ module.exports = {
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
     dialect: 'mysql',
-    dialectOptions,
-    timezone: '+00:00',
   },
 };
 

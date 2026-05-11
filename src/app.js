@@ -1,12 +1,8 @@
 const path = require('path');
-
-if (!process.env.TZ) {
-  process.env.TZ = 'UTC';
-}
-
+// Try multiple paths for dotenv in different deployment environments
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
-require('dotenv').config();
+require('dotenv').config(); // Fallback to default .env location
 
 const express = require('express');
 const morgan = require('morgan');
