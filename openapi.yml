@@ -39,6 +39,7 @@ tags:
   - name: Help Submissions
   - name: Competition
   - name: Bankes Mock
+  - name: Broadcast
 
 security:
   - bearerAuth: []
@@ -152,7 +153,8 @@ paths:
     post:
       tags: [Activities]
       summary: Create activity
-      security: []
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -161,6 +163,7 @@ paths:
               $ref: '#/components/schemas/ActivityInput'
       responses:
         '201': { $ref: '#/components/responses/Created' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /activities/counts:
     get:
       tags: [Activities]
@@ -195,7 +198,8 @@ paths:
     put:
       tags: [Activities]
       summary: Update activity
-      security: []
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/IdPath'
       requestBody:
@@ -206,14 +210,17 @@ paths:
               $ref: '#/components/schemas/ActivityInput'
       responses:
         '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
     delete:
       tags: [Activities]
       summary: Delete activity
-      security: []
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/IdPath'
       responses:
         '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /merchandises:
     get:
@@ -229,7 +236,8 @@ paths:
     post:
       tags: [Merchandise]
       summary: Create merchandise
-      security: []
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -238,6 +246,7 @@ paths:
               $ref: '#/components/schemas/MerchandiseInput'
       responses:
         '201': { $ref: '#/components/responses/Created' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /merchandises/{id}:
     get:
       tags: [Merchandise]
@@ -251,7 +260,8 @@ paths:
     put:
       tags: [Merchandise]
       summary: Update merchandise
-      security: []
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/IdPath'
       requestBody:
@@ -262,14 +272,17 @@ paths:
               $ref: '#/components/schemas/MerchandiseInput'
       responses:
         '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
     delete:
       tags: [Merchandise]
       summary: Delete merchandise
-      security: []
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/IdPath'
       responses:
         '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /transactions:
     get:
@@ -466,7 +479,8 @@ paths:
     post:
       tags: [Faculties]
       summary: Create faculty
-      security: []
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -475,11 +489,13 @@ paths:
               $ref: '#/components/schemas/FacultyInput'
       responses:
         '201': { $ref: '#/components/responses/Created' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /faculties/{id}:
     put:
       tags: [Faculties]
       summary: Update faculty
-      security: []
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/IdPath'
       requestBody:
@@ -490,14 +506,17 @@ paths:
               $ref: '#/components/schemas/FacultyInput'
       responses:
         '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
     delete:
       tags: [Faculties]
       summary: Delete faculty
-      security: []
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/IdPath'
       responses:
         '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /tally-submissions/form/{formSlug}:
     get:
@@ -646,7 +665,8 @@ paths:
     post:
       tags: [Kemitraan]
       summary: Create kemitraan
-      security: []
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -655,6 +675,7 @@ paths:
               $ref: '#/components/schemas/KemitraanInput'
       responses:
         '201': { $ref: '#/components/responses/Created' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /kemitraan/{id}:
     get:
       tags: [Kemitraan]
@@ -664,10 +685,12 @@ paths:
         - $ref: '#/components/parameters/IdPath'
       responses:
         '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
     put:
       tags: [Kemitraan]
       summary: Update kemitraan
-      security: []
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/IdPath'
       requestBody:
@@ -678,14 +701,17 @@ paths:
               $ref: '#/components/schemas/KemitraanInput'
       responses:
         '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
     delete:
       tags: [Kemitraan]
       summary: Delete kemitraan
-      security: []
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/IdPath'
       responses:
         '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /kegiatan-kemitraan:
     get:
@@ -839,10 +865,12 @@ paths:
         - $ref: '#/components/parameters/IdPath'
       responses:
         '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
     put:
       tags: [Users]
       summary: Update user
-      security: []
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/IdPath'
       requestBody:
@@ -853,14 +881,17 @@ paths:
               $ref: '#/components/schemas/UserInput'
       responses:
         '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
     delete:
       tags: [Users]
       summary: Delete user
-      security: []
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/IdPath'
       responses:
         '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /members:
     get:
@@ -894,10 +925,12 @@ paths:
         - $ref: '#/components/parameters/IdPath'
       responses:
         '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
     put:
       tags: [Members]
       summary: Update member
-      security: []
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/IdPath'
       requestBody:
@@ -908,20 +941,24 @@ paths:
               $ref: '#/components/schemas/MemberInput'
       responses:
         '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
     delete:
       tags: [Members]
       summary: Delete member
-      security: []
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/IdPath'
       responses:
         '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /admins:
     post:
       tags: [Admins]
       summary: Create admin
-      security: []
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -931,6 +968,7 @@ paths:
               additionalProperties: true
       responses:
         '201': { $ref: '#/components/responses/Created' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /help-submissions:
     get:
@@ -969,10 +1007,12 @@ paths:
         - $ref: '#/components/parameters/IdPath'
       responses:
         '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
     put:
       tags: [Help Submissions]
       summary: Update help submission
-      security: []
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/IdPath'
       requestBody:
@@ -988,14 +1028,17 @@ paths:
                   format: binary
       responses:
         '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
     delete:
       tags: [Help Submissions]
       summary: Delete help submission
-      security: []
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/IdPath'
       responses:
         '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /bankes-mock/mahasiswa:
     get:
@@ -1011,6 +1054,92 @@ paths:
       security: []
       responses:
         '200': { $ref: '#/components/responses/Success' }
+
+  /broadcast/settings:
+    get:
+      tags: [Broadcast]
+      summary: List broadcast settings
+      security:
+        - bearerAuth: []
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Broadcast]
+      summary: Create broadcast setting
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /broadcast/settings/{id}:
+    put:
+      tags: [Broadcast]
+      summary: Update broadcast setting
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [Broadcast]
+      summary: Delete broadcast setting
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /broadcast/run/{id}:
+    post:
+      tags: [Broadcast]
+      summary: Trigger broadcast execution
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /broadcast/logs:
+    get:
+      tags: [Broadcast]
+      summary: Get broadcast logs
+      security:
+        - bearerAuth: []
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /broadcast/members:
+    get:
+      tags: [Broadcast]
+      summary: Get broadcast recipients
+      security:
+        - bearerAuth: []
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /competition/findCompetition:
     get:
