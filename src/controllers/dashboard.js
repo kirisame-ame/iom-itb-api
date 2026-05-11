@@ -12,7 +12,7 @@ module.exports = {
   },
 
   async getCharts(req, res) {
-    const data = await chartsService.getCharts();
+    const data = await chartsService.getCharts(req.query);
     res.json(data);
   },
 
