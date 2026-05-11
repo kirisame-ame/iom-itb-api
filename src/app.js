@@ -64,6 +64,12 @@ const swaggerOption = {
 };
 
 const swaggerSpec = swaggerJsDoc(swaggerOption);
+
+// Explicit route for openapi.json BEFORE swagger middleware
+app.get('/api/openapi.json', (req, res) => {
+  res.json(swaggerSpec);
+});
+
 app.use(
   '/api',
   swaggerUi.serve,
@@ -103,6 +109,7 @@ app.use(express.json());
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Custom static middleware - exclude /api routes
 app.use((req, res, next) => {
   if (req.path.startsWith('/api')) return next();
   express.static(path.join(__dirname, ''))(req, res, next);
