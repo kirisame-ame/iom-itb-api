@@ -52,7 +52,7 @@ const swaggerOption = {
     },
     servers: [
       {
-        url: process.env.API_UPLOAD_URL || process.env.SERVICE_URL_APP || process.env.BASE_URL || 'https://iom-api.kirisame.jp.net',
+        url: process.env.BASE_URL,
         description: 'Production Server',
       },
     ],
@@ -103,12 +103,10 @@ app.use(express.json());
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-const serveStatic = (req, res, next) => {
+app.use((req, res, next) => {
   if (req.path.startsWith('/api')) return next();
   express.static(path.join(__dirname, ''))(req, res, next);
-};
-
-app.use('/', serveStatic);
+});
 
 app.use('/email-templates', require('./routes/emailTemplate'));
 app.use(router);
