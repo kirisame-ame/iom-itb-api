@@ -62,7 +62,7 @@ Terima kasih atas kontribusi Anda kepada IOM ITB!`,
   </div>
   <h2 style="color:#1d4ed8;margin-bottom:4px;">IOM ITB</h2>
   <p style="color:#6b7280;margin-top:0;">${rendered.subject}</p>
-  <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;">
+  <div style="height:1px;background:#e5e7eb;margin:16px 0;"></div>
   ${rendered.bodyHtml}
   ${renderEmailFooter()}
 </div>`,
@@ -116,7 +116,7 @@ Terima kasih telah berbelanja di IOM ITB!`,
   </div>
   <h2 style="color:#1d4ed8;margin-bottom:4px;">IOM ITB</h2>
   <p style="color:#6b7280;margin-top:0;">${rendered.subject}</p>
-  <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;">
+  <div style="height:1px;background:#e5e7eb;margin:16px 0;"></div>
   ${rendered.bodyHtml}
   ${renderOrderStatusCta(data.orderStatusUrl)}
   ${renderEmailFooter()}
@@ -134,7 +134,7 @@ const buildTransactionProofReceivedEmail = ({ username, code, merchandiseName, q
   </div>
   <h2 style="color:#1d4ed8;margin-bottom:4px;">IOM ITB</h2>
   <p style="color:#6b7280;margin-top:0;">Bukti Pembayaran Telah Kami Terima</p>
-  <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;">
+  <div style="height:1px;background:#e5e7eb;margin:16px 0;"></div>
   <p>Halo <strong>${username}</strong>,</p>
   <p>Terima kasih, kami telah menerima bukti pembayaran Anda. Tim IOM ITB akan memverifikasi pembayaran dalam 1x24 jam.</p>
   <table style="width:100%;border-collapse:collapse;margin:16px 0;">
@@ -197,7 +197,7 @@ const buildTransactionShippingStatusEmail = ({ username, code, merchandiseName, 
   </div>
   <h2 style="color:#1d4ed8;margin-bottom:4px;">IOM ITB</h2>
   <p style="color:#6b7280;margin-top:0;">${copy.title}</p>
-  <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;">
+  <div style="height:1px;background:#e5e7eb;margin:16px 0;"></div>
   <p>Halo <strong>${username}</strong>,</p>
   <p><strong>${copy.headline}</strong></p>
   <p>${copy.body}</p>

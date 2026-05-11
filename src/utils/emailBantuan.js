@@ -1,11 +1,11 @@
 const path = require('path');
+const { renderEmailFooter } = require('../services/payments/templates/emailLayout');
 
-const LOGO_PATH = path.resolve(
-  __dirname,
-  '../assets/IOM-ITB-PrimaryLogo-blue.png'
-);
-
+const LOGO_PATH = path.resolve(__dirname, '../assets/IOM-ITB-PrimaryLogo-blue.png');
 const LOGO_CID = 'iom-itb-logo';
+
+const LOGO_WHITE_PATH = path.resolve(__dirname, '../assets/IOM-ITB-PrimaryLogo-white.png');
+const LOGO_WHITE_CID = 'iom-itb-logo-white';
 
 /**
  * @typedef {Object} MailAttachment
@@ -24,6 +24,13 @@ const logoAttachment = () => ({
   filename: 'IOM-ITB-PrimaryLogo-blue.png',
   path: LOGO_PATH,
   cid: LOGO_CID,
+  contentType: 'image/png',
+});
+
+const logoWhiteAttachment = () => ({
+  filename: 'IOM-ITB-PrimaryLogo-white.png',
+  path: LOGO_WHITE_PATH,
+  cid: LOGO_WHITE_CID,
   contentType: 'image/png',
 });
 
@@ -183,10 +190,35 @@ const renderPengajuanStatusHtml = ({
   `;
 };
 
+const wrapPengajuanEmailHtml = (bodyHtml, title = 'Update Status Pengajuan Bantuan') => `
+  <div style="font-family: Arial, sans-serif; font-size: 14px; max-width: 600px; margin: 0 auto; color: #222;">
+    <div style="background: #2563eb; color: #fff; padding: 20px 24px; border-radius: 8px 8px 0 0; text-align: center;">
+      <img
+        src="cid:${LOGO_WHITE_CID}"
+        alt="IOM ITB"
+        style="max-width: 180px; height: auto; margin-bottom: 16px;"
+      />
+      <h1 style="margin: 0; font-size: 20px;">${title}</h1>
+      <p style="margin: 4px 0 0; font-size: 13px; opacity: 0.9;">IOM ITB</p>
+    </div>
+    <div style="border: 1px solid #e5e7eb; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
+      ${bodyHtml}
+      <p style="margin: 24px 0 8px; font-size: 12px; color: #9ca3af; text-align: center;">
+        Email ini dikirim otomatis, mohon tidak membalas email ini.
+      </p>
+      ${renderEmailFooter()}
+    </div>
+  </div>
+`;
+
 module.exports = {
   LOGO_CID,
   LOGO_PATH,
   logoAttachment,
+  LOGO_WHITE_CID,
+  LOGO_WHITE_PATH,
+  logoWhiteAttachment,
   renderPengajuanStatusHtml,
+  wrapPengajuanEmailHtml,
   formatDate,
 };

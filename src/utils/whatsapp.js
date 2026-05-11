@@ -20,11 +20,11 @@ const sendWhatsApp = async (to, message, idempotencyKey, clientReference) => {
     };
   }
 
-  const normalizedTo = normalizePhone(to);
-  const body = { to: normalizedTo, message };
+  // Caller is expected to pass an already-normalized E.164 number.
+  const body = { to, message };
   if (clientReference) body.client_reference = clientReference;
 
-  console.log(`[WhatsApp] Sending to ${normalizedTo} (original: ${to}), key=${idempotencyKey}`);
+  console.log(`[WhatsApp] Sending to ${to}, key=${idempotencyKey}`);
   try {
     const res = await fetch(`${baseUrl}/api/v1/messages/whatsapp`, {
       method: "POST",

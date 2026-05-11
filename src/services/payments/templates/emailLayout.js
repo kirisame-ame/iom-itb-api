@@ -3,6 +3,9 @@ const path = require('path');
 const LOGO_PATH = path.resolve(__dirname, '../../../assets/IOM-ITB-PrimaryLogo-blue.png');
 const LOGO_CID = 'iom-itb-logo';
 
+const LOGO_WHITE_PATH = path.resolve(__dirname, '../../../assets/IOM-ITB-PrimaryLogo-white.png');
+const LOGO_WHITE_CID = 'iom-itb-logo-white';
+
 /**
  * @typedef {Object} MailAttachment
  * @property {string} filename
@@ -12,14 +15,17 @@ const LOGO_CID = 'iom-itb-logo';
  * @property {string} [contentType]
  */
 
-/**
- * Inline image attachment for embedding the logo.
- * @returns {MailAttachment}
- */
 const logoAttachment = () => ({
   filename: 'IOM-ITB-PrimaryLogo-blue.png',
   path: LOGO_PATH,
   cid: LOGO_CID,
+  contentType: 'image/png',
+});
+
+const logoWhiteAttachment = () => ({
+  filename: 'IOM-ITB-PrimaryLogo-white.png',
+  path: LOGO_WHITE_PATH,
+  cid: LOGO_WHITE_CID,
   contentType: 'image/png',
 });
 
@@ -99,9 +105,9 @@ const renderOrderStatusCta = (orderStatusUrl) => {
  * @returns {string}
  */
 const renderInvoiceHtml = ({ title, recipientLabel, recipientName, rows, grossAmount, footer, orderStatusUrl }) => `
-  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #222;">
+  <div style="font-family: Arial, sans-serif; font-size: 14px; max-width: 600px; margin: 0 auto; color: #222;">
     <div style="background: #4f46e5; color: #fff; padding: 20px 24px; border-radius: 8px 8px 0 0; text-align: center;">
-      <img src="cid:${LOGO_CID}" alt="IOM ITB" style="max-width: 180px; height: auto; margin-bottom: 16px;" />
+      <img src="cid:${LOGO_WHITE_CID}" alt="IOM ITB" style="max-width: 180px; height: auto; margin-bottom: 16px;" />
       <h1 style="margin: 0; font-size: 20px;">${title}</h1>
       <p style="margin: 4px 0 0; font-size: 13px; opacity: 0.9;">IOM ITB</p>
     </div>
@@ -134,7 +140,8 @@ const renderInvoiceHtml = ({ title, recipientLabel, recipientName, rows, grossAm
 `;
 
 const renderEmailFooter = () => `
-  <div style="margin-top:24px;padding-top:20px;border-top:1px solid #e5e7eb;">
+  <div style="margin-top:24px;height:1px;background:#e5e7eb;"></div>
+  <div style="padding-top:20px;">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
       <tr>
         
@@ -209,6 +216,9 @@ module.exports = {
   LOGO_CID,
   LOGO_PATH,
   logoAttachment,
+  LOGO_WHITE_CID,
+  LOGO_WHITE_PATH,
+  logoWhiteAttachment,
   renderInvoiceHtml,
   renderOrderStatusCta,
   renderEmailFooter,

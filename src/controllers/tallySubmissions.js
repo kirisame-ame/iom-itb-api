@@ -4,12 +4,15 @@ const { Op, literal } = require('sequelize');
 const { StatusCodes } = require('http-status-codes');
 const db = require('../models');
 const BaseResponse = require('../schemas/responses/BaseResponse');
-const triggerWhatsappNotification = require('../services/tallyWebhooks/triggerWhatsappNotificationStub');
+const triggerWhatsappNotification = require('../services/tallyWebhooks/triggerWhatsappNotification');
 const sendEmail = require('../utils/mailer');
+const { getRenderedEmailTemplate } = require('../services/payments/templates/templateRenderer');
 
 const {
-  renderPengajuanStatusHtml,
   logoAttachment,
+  logoWhiteAttachment,
+  wrapPengajuanEmailHtml,
+  formatDate,
 } = require('../utils/emailBantuan');
 
 const ALLOWED_FORM_SLUGS = ['pendaftaran_anggota', 'pengajuan_bantuan', 'orang_tua_asuh'];
@@ -353,36 +356,37 @@ const UpdatePengajuanBantuanStatus = async (req, res) => {
       const nama = payload?.answersByLabel?.Nama;
 
       if (email) {
-        const subject = 'Update Status Pengajuan Bantuan';
-
-        const textMessage = buildStatusMessage({
-          nama,
-          tallySubmissionId,
-          status: result.statusRow.currentStatus,
-          catatan: result.statusRow.catatan,
-        });
-
-        const htmlMessage = renderPengajuanStatusHtml({
-          recipientName: nama,
-          tallySubmissionId,
-          status: result.statusRow.currentStatus,
-          catatan: result.statusRow.catatan,
-          updatedAt: result.statusRow.updatedAt,
-        });
-
         try {
+          const statusLabel = STATUS_LABELS[result.statusRow.currentStatus] || result.statusRow.currentStatus || '-';
+          const { subject, bodyHtml } = await getRenderedEmailTemplate(
+            'pengajuan_bantuan_status_update',
+            {
+              name: nama || '-',
+              submission_id: tallySubmissionId,
+              status: statusLabel,
+              catatan_line: result.statusRow.catatan || '',
+              updated_at: formatDate(result.statusRow.updatedAt),
+            },
+            {
+              subject: `Update Status Pengajuan Bantuan - ${statusLabel}`,
+              body: `Halo {{name}},\n\nStatus pengajuan bantuan Anda telah diperbarui.\n\nID Pengajuan: {{submission_id}}\nStatus: {{status}}\nCatatan: {{catatan_line}}\nWaktu Update: {{updated_at}}\n\nSilakan login ke sistem untuk melihat detail pengajuan Anda.\n\nTerima kasih,\nTim Pengajuan Bantuan IOM ITB`,
+            },
+          );
+
           await sendEmail({
             to: email,
             subject,
-            html: htmlMessage,
-            text: textMessage,
-            attachments: [logoAttachment()],
+            html: wrapPengajuanEmailHtml(bodyHtml),
+            text: buildStatusMessage({
+              nama,
+              tallySubmissionId,
+              status: result.statusRow.currentStatus,
+              catatan: result.statusRow.catatan,
+            }),
+            attachments: [logoAttachment(), logoWhiteAttachment()],
           });
         } catch (err) {
-          console.warn(
-            '[Email] Failed to send status update:',
-            err.message
-          );
+          console.warn('[Email] Failed to send status update:', err.message);
         }
       }
     }

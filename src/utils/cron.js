@@ -21,7 +21,7 @@ const forgotPasswordJob = cron.schedule('*/10 * * * *', async () => {
     } catch (error) {
         console.error(error);
     }
-});
+}, { scheduled: false });
 
 // Runs daily at 08:00 to check and fire due broadcast settings
 const broadcastJob = cron.schedule('0 8 * * *', async () => {

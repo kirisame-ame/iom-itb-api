@@ -8,6 +8,7 @@ module.exports = (sequelize, DataTypes) => {
     body: DataTypes.TEXT,
     variables: DataTypes.JSON,
     isActive: DataTypes.BOOLEAN,
+    channel: { type: DataTypes.STRING(20), defaultValue: 'email' },
   }, {
     tableName: 'EmailTemplates',
   });

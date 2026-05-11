@@ -1,13 +1,20 @@
-const { Donations, Transactions, Merchandises, sequelize } = require('../../models');
+const { Donations, Transactions, Merchandises, sequelize, EmailTemplate } = require('../../models');
 const { DonationDto, TransactionDto } = require('../../dtos/payments');
 const sendEmail = require('../../utils/mailer');
 const sendWhatsApp = require('../../utils/whatsapp');
+const { normalizeWhatsAppRecipient } = require('../../utils/whatsappPhone');
 const { buildOrderStatusUrl } = require('./templates/emailLayout');
 const { restoreMerchandiseStock } = require('./stockHelper');
 const {
   buildDonationPaymentEmail,
   buildTransactionPaymentEmail,
 } = require('./templates/paymentConfirmation');
+
+const getWaMessage = async (key, data, fallback) => {
+  const template = await EmailTemplate.findOne({ where: { key, isActive: true } });
+  const body = template?.body || fallback;
+  return body.replace(/{{\s*(\w+)\s*}}/g, (_, k) => data[k] ?? '');
+};
 
 const assertAmountMatches = (orderId, expected, actual) => {
   if (expected == null) return;
@@ -36,15 +43,26 @@ const notifyDonationPaid = async (donation, transactionId) => {
   const confirmationPayload = donation.toPaymentConfirmationPayload(transactionId);
 
   if (channels.whatsapp && donation.noWhatsapp) {
-    const message = `Halo ${donation.name}!\n\nPembayaran donasi Anda sebesar Rp ${confirmationPayload.amount} telah berhasil dikonfirmasi.\n\nTerima kasih atas kontribusi Anda kepada IOM ITB!\n\nSalam,\nIOM ITB`;
-    tasks.push(
-      sendWhatsApp(
-        donation.noWhatsapp,
-        message,
-        `donation-${donation.id}-paid`,
-        `donation-${donation.id}`
-      )
-    );
+    const phoneResult = normalizeWhatsAppRecipient(donation.noWhatsapp, {
+      defaultCountryCode: process.env.WHATSAPP_DEFAULT_COUNTRY_CODE || '62',
+    });
+    if (phoneResult.isValid) {
+      const message = await getWaMessage(
+        'donation_payment_whatsapp',
+        { name: donation.name, amount: confirmationPayload.amount },
+        `Halo ${donation.name}!\n\nPembayaran donasi Anda sebesar Rp ${confirmationPayload.amount} telah berhasil dikonfirmasi.\n\nTerima kasih atas kontribusi Anda kepada IOM ITB!\n\nSalam,\nIOM ITB`
+      );
+      tasks.push(
+        sendWhatsApp(
+          phoneResult.normalized,
+          message,
+          `donation-${donation.id}-paid`,
+          `donation-${donation.id}`
+        )
+      );
+    } else {
+      console.warn(`[WA] Invalid donation phone for id=${donation.id}: ${donation.noWhatsapp} (${phoneResult.reason})`);
+    }
   }
 
   if (donation.email) {
@@ -65,16 +83,33 @@ const notifyTransactionPaid = async (trx, transactionId) => {
   const orderStatusUrl = buildOrderStatusUrl(confirmationPayload.orderStatusToken);
 
   if (trx.noTelp) {
-    const message = `Halo ${trx.username}!\n\nPembayaran pesanan Anda telah berhasil!\n\nKode Pesanan: ${confirmationPayload.code}\nProduk: ${confirmationPayload.merchandiseName} x ${trx.qty}\nTotal: Rp ${confirmationPayload.amount}\n\nPesanan Anda sedang diproses. Pantau status pesanan melalui tautan berikut:\n${orderStatusUrl}\n\nSalam,\nIOM ITB`;
-
-    tasks.push(
-      sendWhatsApp(
-        trx.noTelp,
-        message,
-        `transaction-${trx.id}-paid`,
-        `transaction-${trx.id}`
-      )
-    );
+    const phoneResult = normalizeWhatsAppRecipient(trx.noTelp, {
+      defaultCountryCode: process.env.WHATSAPP_DEFAULT_COUNTRY_CODE || '62',
+    });
+    if (phoneResult.isValid) {
+      const message = await getWaMessage(
+        'transaction_payment_whatsapp',
+        {
+          username: trx.username,
+          code: confirmationPayload.code,
+          merchandise_name: confirmationPayload.merchandiseName,
+          qty: trx.qty,
+          amount: confirmationPayload.amount,
+          order_status_url: orderStatusUrl,
+        },
+        `Halo ${trx.username}!\n\nPembayaran pesanan Anda telah berhasil!\n\nKode Pesanan: ${confirmationPayload.code}\nProduk: ${confirmationPayload.merchandiseName} x ${trx.qty}\nTotal: Rp ${confirmationPayload.amount}\n\nPesanan Anda sedang diproses. Pantau status pesanan melalui tautan berikut:\n${orderStatusUrl}\n\nSalam,\nIOM ITB`
+      );
+      tasks.push(
+        sendWhatsApp(
+          phoneResult.normalized,
+          message,
+          `transaction-${trx.id}-paid`,
+          `transaction-${trx.id}`
+        )
+      );
+    } else {
+      console.warn(`[WA] Invalid transaction phone for id=${trx.id}: ${trx.noTelp} (${phoneResult.reason})`);
+    }
   }
 
   if (trx.email) {
