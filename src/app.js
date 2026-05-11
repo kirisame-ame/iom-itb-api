@@ -71,7 +71,7 @@ app.get('/api/openapi.json', (req, res) => {
 });
 
 app.use(
-  '/api',
+  '/api/docs',
   swaggerUi.serve,
   swaggerUi.setup(swaggerSpec, {
     explorer: true,
