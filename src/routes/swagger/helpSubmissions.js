@@ -78,6 +78,8 @@
  *   put:
  *     summary: Update help submission
  *     tags: [HelpSubmissions]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -112,6 +114,8 @@
  *   delete:
  *     summary: Delete help submission
  *     tags: [HelpSubmissions]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id

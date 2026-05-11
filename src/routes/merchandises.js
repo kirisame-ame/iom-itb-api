@@ -9,6 +9,7 @@ const {
 const upload  = require('../middlewares/multer');
 
 const { Merchandises } = require('../models');
+const JWTValidation = require('../middlewares/auth');
 
 const router = Router();
 
@@ -31,8 +32,8 @@ router.get('/categories', async (req, res) => {
 
 router.get('', [], GetAllMerchandise);
 router.get('/:id', [], GetMerchandiseById);
-router.post('', [], CreateNewMerchandise);
-router.put('/:id', [], UpdateMerchandiseById);
-router.delete('/:id', [], DeleteMerchandiseById);
+router.post('', JWTValidation, [], CreateNewMerchandise);
+router.put('/:id', JWTValidation, [], UpdateMerchandiseById);
+router.delete('/:id', JWTValidation, [], DeleteMerchandiseById);
 
 module.exports = router;

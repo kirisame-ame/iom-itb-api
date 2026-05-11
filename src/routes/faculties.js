@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const { Faculties } = require('../models');
+const JWTValidation = require('../middlewares/auth');
 
 const router = Router();
 
@@ -21,7 +22,7 @@ router.get('', async (req, res) => {
   }
 });
 
-router.post('', async (req, res) => {
+router.post('', JWTValidation, async (req, res) => {
   try {
     const payload = pick(req.body);
     if (!payload.name) {
@@ -35,7 +36,7 @@ router.post('', async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', JWTValidation, async (req, res) => {
   try {
     const faculty = await Faculties.findByPk(req.params.id);
     if (!faculty) {
@@ -49,7 +50,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', JWTValidation, async (req, res) => {
   try {
     const faculty = await Faculties.findByPk(req.params.id);
     if (!faculty) {

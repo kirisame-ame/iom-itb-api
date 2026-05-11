@@ -32,6 +32,8 @@
  *   post:
  *     summary: Create new kemitraan
  *     tags: [Kemitraan]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       content:
  *         multipart/form-data:
@@ -85,6 +87,8 @@
  *   put:
  *     summary: Update kemitraan
  *     tags: [Kemitraan]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -122,6 +126,8 @@
  *   delete:
  *     summary: Delete kemitraan
  *     tags: [Kemitraan]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id

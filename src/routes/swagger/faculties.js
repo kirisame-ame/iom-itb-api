@@ -34,6 +34,8 @@
  *   post:
  *     summary: Create new faculty
  *     tags: [Faculties]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       content:
  *         application/json:
@@ -63,6 +65,8 @@
  *   put:
  *     summary: Update faculty
  *     tags: [Faculties]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -92,6 +96,8 @@
  *   delete:
  *     summary: Delete faculty
  *     tags: [Faculties]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id

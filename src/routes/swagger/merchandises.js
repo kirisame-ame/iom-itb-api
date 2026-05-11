@@ -51,6 +51,8 @@
  *   post:
  *     summary: Create new merchandise
  *     tags: [Merchandise]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       content:
  *         application/json:
@@ -108,6 +110,8 @@
  *   put:
  *     summary: Update merchandise
  *     tags: [Merchandise]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -144,6 +148,8 @@
  *   delete:
  *     summary: Delete merchandise
  *     tags: [Merchandise]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id

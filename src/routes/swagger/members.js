@@ -32,6 +32,8 @@
  *   post:
  *     summary: Create new member
  *     tags: [Members]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       content:
  *         multipart/form-data:
@@ -86,6 +88,8 @@
  *   put:
  *     summary: Update member
  *     tags: [Members]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -121,6 +125,8 @@
  *   delete:
  *     summary: Delete member
  *     tags: [Members]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id

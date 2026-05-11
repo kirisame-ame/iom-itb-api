@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { BroadcastSettings, BroadcastLogs } = require('../models');
+const JWTValidation = require('../middlewares/auth');
 const createBroadcastSetting = require('../services/broadcast/createBroadcastSetting');
 const updateBroadcastSetting = require('../services/broadcast/updateBroadcastSetting');
 const deleteBroadcastSetting = require('../services/broadcast/deleteBroadcastSetting');
@@ -17,8 +18,7 @@ router.get('/settings', async (req, res) => {
   }
 });
 
-// POST /broadcast/settings
-router.post('/settings', async (req, res) => {
+router.post('/settings', JWTValidation, async (req, res) => {
   try {
     const setting = await createBroadcastSetting(req.body);
     res.status(201).json({ data: setting });
@@ -27,8 +27,7 @@ router.post('/settings', async (req, res) => {
   }
 });
 
-// PUT /broadcast/settings/:id
-router.put('/settings/:id', async (req, res) => {
+router.put('/settings/:id', JWTValidation, async (req, res) => {
   try {
     const setting = await updateBroadcastSetting(req.params.id, req.body);
     res.json({ data: setting });
@@ -37,8 +36,7 @@ router.put('/settings/:id', async (req, res) => {
   }
 });
 
-// DELETE /broadcast/settings/:id
-router.delete('/settings/:id', async (req, res) => {
+router.delete('/settings/:id', JWTValidation, async (req, res) => {
   try {
     await deleteBroadcastSetting(req.params.id);
     res.json({ message: 'Deleted' });
@@ -47,8 +45,7 @@ router.delete('/settings/:id', async (req, res) => {
   }
 });
 
-// POST /broadcast/run/:id — manual blast
-router.post('/run/:id', async (req, res) => {
+router.post('/run/:id', JWTValidation, async (req, res) => {
   try {
     const result = await runBroadcast(req.params.id);
     res.json(result);

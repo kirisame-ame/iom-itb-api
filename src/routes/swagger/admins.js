@@ -5,6 +5,8 @@
  *   post:
  *     summary: Create new admin
  *     tags: [Admins]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       content:
  *         application/json:
