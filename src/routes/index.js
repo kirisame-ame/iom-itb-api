@@ -28,6 +28,7 @@ const ImageRouter = require('./image');
 const BankesMockRouter = require('./bankesMock');
 const NotificationsRouter = require('./notifications');
 const EmailTemplateRouter = require('./emailTemplate');
+const BroadcastRouter = require('./broadcast');
 
 router.get('/', (req, res) => {
   res.json({
@@ -62,5 +63,6 @@ router.use('/images', ImageRouter);
 router.use('/bankes-mock', BankesMockRouter);
 router.use('/notifications', NotificationsRouter);
 router.use('/email-templates', EmailTemplateRouter);
+router.use('/broadcast', BroadcastRouter);
 
 module.exports = router;

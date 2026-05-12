@@ -1,4 +1,5 @@
 const express = require('express');
+const multer = require('multer');
 const router = express.Router();
 const { BroadcastSettings, BroadcastLogs } = require('../models');
 const JWTValidation = require('../middlewares/auth');
@@ -7,6 +8,18 @@ const updateBroadcastSetting = require('../services/broadcast/updateBroadcastSet
 const deleteBroadcastSetting = require('../services/broadcast/deleteBroadcastSetting');
 const runBroadcast = require('../services/broadcast/runBroadcast');
 const getBroadcastRecipients = require('../services/broadcast/getBroadcastRecipients');
+const createBroadcastRecipient = require('../services/broadcast/createBroadcastRecipient');
+const importBroadcastRecipients = require('../services/broadcast/importBroadcastRecipients');
+const deleteBroadcastRecipient = require('../services/broadcast/deleteBroadcastRecipient');
+
+const recipientUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok = /\.(csv|xls|xlsx)$/i.test(file.originalname || '');
+    cb(ok ? null : new Error('File harus .csv, .xls, atau .xlsx'), ok);
+  },
+});
 
 // GET /broadcast/settings
 router.get('/settings', async (req, res) => {
@@ -79,13 +92,40 @@ router.get('/logs', async (req, res) => {
   }
 });
 
-// GET /broadcast/members — list members with WA & email
+// GET /broadcast/members — list manual recipients
 router.get('/members', async (req, res) => {
   try {
     const data = await getBroadcastRecipients();
     res.json({ data });
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+});
+
+router.post('/members', JWTValidation, async (req, res) => {
+  try {
+    const recipient = await createBroadcastRecipient(req.body);
+    res.status(201).json({ data: recipient });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
+router.post('/members/import', JWTValidation, recipientUpload.single('file'), async (req, res) => {
+  try {
+    const result = await importBroadcastRecipients(req.file);
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
+router.delete('/members/:id', JWTValidation, async (req, res) => {
+  try {
+    await deleteBroadcastRecipient(req.params.id);
+    res.json({ message: 'Deleted' });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
   }
 });
 
