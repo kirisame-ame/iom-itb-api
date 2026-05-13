@@ -2,6 +2,7 @@ const { BroadcastSettings, BroadcastLogs } = require('../../models');
 const sendWhatsApp = require('../../utils/whatsapp');
 const sendEmail = require('../../utils/mailer');
 const getBroadcastRecipients = require('./getBroadcastRecipients');
+const { toBroadcastRunDto } = require('../../dtos/broadcast');
 
 const buildMessage = (template, name, jenisIuran) => {
   return template
@@ -90,11 +91,11 @@ const runBroadcast = async (settingId) => {
     });
   }
 
-  await BroadcastLogs.bulkCreate(logs);
+  const createdLogs = await BroadcastLogs.bulkCreate(logs);
   await setting.update({ lastRunAt: sentAt });
 
   const sentCount = logs.filter((l) => l.waStatus === 'sent' || l.emailStatus === 'sent').length;
-  return { sent: sentCount, attempted: logs.length, logs };
+  return toBroadcastRunDto({ sent: sentCount, attempted: createdLogs.length, logs: createdLogs });
 };
 
 module.exports = runBroadcast;

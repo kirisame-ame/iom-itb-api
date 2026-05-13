@@ -5,6 +5,7 @@ const CreateMerchandise = require('../services/merchandises/createMerchandises')
 const GetMerchandise = require('../services/merchandises/getMerchandises');
 const UpdateMerchandise = require('../services/merchandises/updateMerchandises');
 const DeleteMerchandise = require('../services/merchandises/deleteMerchandises');
+const DeleteMerchandiseCategoryService = require('../services/merchandises/deleteMerchandiseCategory');
 
 
 const GetMerchandiseById = async (req, res) => {
@@ -131,10 +132,30 @@ const DeleteMerchandiseById = async (req, res) => {
   }
 };
 
+const DeleteMerchandiseCategory = async (req, res) => {
+  try {
+    const { category } = req.params;
+    const result = await DeleteMerchandiseCategoryService(decodeURIComponent(category || ''));
+
+    res.status(StatusCodes.OK).json(new BaseResponse({
+      status: StatusCodes.OK,
+      message: result.message,
+      data: { affectedCount: result.affectedCount },
+    }));
+  } catch (error) {
+    const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
+    res.status(status).json(new BaseResponse({
+      status,
+      message: error.message,
+    }));
+  }
+};
+
 module.exports = {
   GetMerchandiseById,
   GetAllMerchandise,
   CreateNewMerchandise,
   UpdateMerchandiseById,
   DeleteMerchandiseById,
+  DeleteMerchandiseCategory,
 };

@@ -5,6 +5,7 @@ const {
   CreateNewMerchandise,
   UpdateMerchandiseById,
   DeleteMerchandiseById,
+  DeleteMerchandiseCategory,
 } = require('../controllers/merchandises');
 const upload  = require('../middlewares/multer');
 
@@ -21,10 +22,8 @@ router.get('/categories', async (req, res) => {
       group: ['kategori'],
       order: [['kategori', 'ASC']],
     });
-    const defaults = ['Stiker', 'Busana', 'ATK'];
-    const fromDb = rows.map(r => r.kategori).filter(Boolean);
-    const merged = [...new Set([...defaults, ...fromDb])].sort();
-    res.json({ data: merged });
+    const categories = [...new Set(rows.map(r => r.kategori).filter(Boolean))].sort();
+    res.json({ data: categories });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -34,6 +33,7 @@ router.get('', [], GetAllMerchandise);
 router.get('/:id', [], GetMerchandiseById);
 router.post('', JWTValidation, [], CreateNewMerchandise);
 router.put('/:id', JWTValidation, [], UpdateMerchandiseById);
+router.delete('/categories/:category', JWTValidation, [], DeleteMerchandiseCategory);
 router.delete('/:id', JWTValidation, [], DeleteMerchandiseById);
 
 module.exports = router;

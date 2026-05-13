@@ -2,6 +2,10 @@ const path = require('path');
 const { parse } = require('csv-parse/sync');
 const XLSX = require('xlsx');
 const { BroadcastRecipients } = require('../../models');
+const {
+  toBroadcastImportResultDto,
+  toBroadcastRecipientImportPayload,
+} = require('../../dtos/broadcast');
 
 const HEADER_MAP = {
   nama: 'name',
@@ -53,18 +57,21 @@ const importBroadcastRecipients = async (file) => {
   if (!file) throw new Error('File tidak ditemukan.');
 
   const rawRows = parseFile(file);
-  const candidates = rawRows.map(mapRow).filter((r) => r.name && (r.noWhatsapp || r.email));
+  const candidates = rawRows
+    .map(mapRow)
+    .map(toBroadcastRecipientImportPayload)
+    .filter(Boolean);
 
   if (!candidates.length) {
     throw new Error('Tidak ada baris valid (butuh kolom Nama dan minimal salah satu dari No. WhatsApp/Email).');
   }
 
   const created = await BroadcastRecipients.bulkCreate(candidates);
-  return {
+  return toBroadcastImportResultDto({
     inserted: created.length,
     skipped: rawRows.length - created.length,
     total: rawRows.length,
-  };
+  });
 };
 
 module.exports = importBroadcastRecipients;

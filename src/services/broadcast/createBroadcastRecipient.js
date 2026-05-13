@@ -1,24 +1,14 @@
 const { BroadcastRecipients } = require('../../models');
-
-const normalize = (v) => {
-  if (v === undefined || v === null) return null;
-  const s = String(v).trim();
-  return s === '' ? null : s;
-};
+const {
+  toBroadcastRecipientCreatePayload,
+  toBroadcastRecipientDto,
+} = require('../../dtos/broadcast');
 
 const createBroadcastRecipient = async (body) => {
-  const name = normalize(body.name);
-  if (!name) throw new Error('Nama wajib diisi.');
-  const noWhatsapp = normalize(body.noWhatsapp);
-  const email = normalize(body.email);
-  if (!noWhatsapp && !email) throw new Error('Minimal salah satu dari No. WhatsApp atau Email wajib diisi.');
+  const payload = toBroadcastRecipientCreatePayload(body);
+  const recipient = await BroadcastRecipients.create(payload);
 
-  return BroadcastRecipients.create({
-    name,
-    nim: normalize(body.nim),
-    noWhatsapp,
-    email,
-  });
+  return toBroadcastRecipientDto(recipient);
 };
 
 module.exports = createBroadcastRecipient;

@@ -11,6 +11,11 @@ const getBroadcastRecipients = require('../services/broadcast/getBroadcastRecipi
 const createBroadcastRecipient = require('../services/broadcast/createBroadcastRecipient');
 const importBroadcastRecipients = require('../services/broadcast/importBroadcastRecipients');
 const deleteBroadcastRecipient = require('../services/broadcast/deleteBroadcastRecipient');
+const updateBroadcastRecipient = require('../services/broadcast/updateBroadcastRecipient');
+const {
+  toBroadcastLogsDto,
+  toBroadcastSettingDto,
+} = require('../dtos/broadcast');
 
 const recipientUpload = multer({
   storage: multer.memoryStorage(),
@@ -25,7 +30,7 @@ const recipientUpload = multer({
 router.get('/settings', async (req, res) => {
   try {
     const settings = await BroadcastSettings.findAll({ order: [['createdAt', 'DESC']] });
-    res.json({ data: settings });
+    res.json({ data: settings.map(toBroadcastSettingDto) });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -79,14 +84,7 @@ router.get('/logs', async (req, res) => {
       limit: parseInt(limit),
       offset: parseInt(offset),
     });
-    res.json({
-      data: rows,
-      pagination: {
-        total: count,
-        page: parseInt(page),
-        totalPages: Math.ceil(count / limit),
-      },
-    });
+    res.json(toBroadcastLogsDto({ rows, count, page, limit }));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -117,6 +115,15 @@ router.post('/members/import', JWTValidation, recipientUpload.single('file'), as
     res.status(201).json(result);
   } catch (err) {
     res.status(400).json({ message: err.message });
+  }
+});
+
+router.put('/members/:id', JWTValidation, async (req, res) => {
+  try {
+    const data = await updateBroadcastRecipient(req.params.id, req.body);
+    res.json({ data, message: 'Penerima berhasil diperbarui' });
+  } catch (err) {
+    res.status(err.status || 400).json({ message: err.message });
   }
 });
 
