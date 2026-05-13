@@ -7,13 +7,11 @@ const GetKemitraanByIdService = require('../services/kemitraan/getKemitraanById'
 const UpdateKemitraan = require('../services/kemitraan/updateKemitraan');
 const DeleteKemitraan = require('../services/kemitraan/deleteKemitraan');
 
-const canReadPrivateMou = (req) => Boolean(req.user);
-
 const GetKemitraanById = async (req, res) => {
   try {
     const { id } = req.params;
     const kemitraan = await GetKemitraanByIdService(id, {
-      includePrivateMou: canReadPrivateMou(req),
+      includePrivateMou: true,
     });
 
     if (!kemitraan) {
@@ -43,8 +41,49 @@ const GetAllKemitraan = async (req, res) => {
 
     const result = await GetKemitraan(
       { search, page, limit },
-      { includePrivateMou: canReadPrivateMou(req) },
+      { includePrivateMou: true },
     );
+
+    res.status(StatusCodes.OK).json(new DataTable(result.data, result.total));
+  } catch (error) {
+    const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
+    res.status(status).json(new BaseResponse({
+      status,
+      message: error.message,
+    }));
+  }
+};
+
+const GetPublicKemitraanById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const kemitraan = await GetKemitraanByIdService(id);
+
+    if (!kemitraan) {
+      return res.status(StatusCodes.NOT_FOUND).json(new BaseResponse({
+        status: StatusCodes.NOT_FOUND,
+        message: 'Kemitraan tidak ditemukan',
+      }));
+    }
+
+    res.status(StatusCodes.OK).json(new BaseResponse({
+      status: StatusCodes.OK,
+      message: 'Kemitraan ditemukan',
+      data: kemitraan,
+    }));
+  } catch (error) {
+    const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
+    res.status(status).json(new BaseResponse({
+      status,
+      message: error.message || 'Terjadi kesalahan saat mengambil Kemitraan',
+    }));
+  }
+};
+
+const GetPublicKemitraan = async (req, res) => {
+  try {
+    const { search, page, limit } = req.query;
+    const result = await GetKemitraan({ search, page, limit });
 
     res.status(StatusCodes.OK).json(new DataTable(result.data, result.total));
   } catch (error) {
@@ -117,6 +156,8 @@ const DeleteKemitraanById = async (req, res) => {
 module.exports = {
   GetKemitraanById,
   GetAllKemitraan,
+  GetPublicKemitraan,
+  GetPublicKemitraanById,
   CreateNewKemitraan,
   UpdateKemitraanById,
   DeleteKemitraanById,
