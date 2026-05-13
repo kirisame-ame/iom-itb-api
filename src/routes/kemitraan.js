@@ -8,11 +8,12 @@ const {
 } = require('../controllers/kemitraan');
 const upload = require('../middlewares/multer');
 const JWTValidation = require('../middlewares/auth');
+const optionalAuth = require('../middlewares/optionalAuth');
 
 const router = Router();
 
-router.get('', [], GetAllKemitraan);
-router.get('/:id', [], GetKemitraanById);
+router.get('', optionalAuth, GetAllKemitraan);
+router.get('/:id', optionalAuth, GetKemitraanById);
 
 router.post(
   '',

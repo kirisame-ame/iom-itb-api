@@ -3,12 +3,13 @@ const { Op } = require('sequelize');
 const { StatusCodes } = require('http-status-codes');
 const BaseError = require('../../schemas/responses/BaseError');
 
-const getKemitraan = async (query = {}) => {
+const getKemitraan = async (query = {}, options = {}) => {
   try {
     const safeQuery = query || {};
     const page = parseInt(safeQuery.page) || 1;
     const limit = parseInt(safeQuery.limit) || 10;
     const search = safeQuery.search || '';
+    const includePrivateMou = Boolean(options.includePrivateMou);
 
     const offset = (page - 1) * limit;
 
@@ -23,12 +24,18 @@ const getKemitraan = async (query = {}) => {
         }
       : {};
 
-    const { count, rows } = await Kemitraan.findAndCountAll({
+    const queryOptions = {
       where: whereClause,
       limit,
       offset,
       order: [['createdAt', 'DESC']],
-    });
+    };
+
+    if (!includePrivateMou) {
+      queryOptions.attributes = { exclude: ['mou'] };
+    }
+
+    const { count, rows } = await Kemitraan.findAndCountAll(queryOptions);
 
     return {
       data: rows,

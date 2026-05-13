@@ -7,10 +7,14 @@ const GetKemitraanByIdService = require('../services/kemitraan/getKemitraanById'
 const UpdateKemitraan = require('../services/kemitraan/updateKemitraan');
 const DeleteKemitraan = require('../services/kemitraan/deleteKemitraan');
 
+const canReadPrivateMou = (req) => Boolean(req.user);
+
 const GetKemitraanById = async (req, res) => {
   try {
     const { id } = req.params;
-    const kemitraan = await GetKemitraanByIdService(id);
+    const kemitraan = await GetKemitraanByIdService(id, {
+      includePrivateMou: canReadPrivateMou(req),
+    });
 
     if (!kemitraan) {
       return res.status(StatusCodes.NOT_FOUND).json(new BaseResponse({
@@ -37,7 +41,10 @@ const GetAllKemitraan = async (req, res) => {
   try {
     const { search, page, limit } = req.query;
 
-    const result = await GetKemitraan({ search, page, limit });
+    const result = await GetKemitraan(
+      { search, page, limit },
+      { includePrivateMou: canReadPrivateMou(req) },
+    );
 
     res.status(StatusCodes.OK).json(new DataTable(result.data, result.total));
   } catch (error) {
