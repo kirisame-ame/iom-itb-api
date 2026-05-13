@@ -6,6 +6,11 @@ const GetMerchandise = require('../services/merchandises/getMerchandises');
 const UpdateMerchandise = require('../services/merchandises/updateMerchandises');
 const DeleteMerchandise = require('../services/merchandises/deleteMerchandises');
 const DeleteMerchandiseCategoryService = require('../services/merchandises/deleteMerchandiseCategory');
+const {
+  createMerchandiseCategory,
+  getMerchandiseCategories,
+  updateMerchandiseCategory,
+} = require('../services/merchandises/merchandiseCategories');
 
 
 const GetMerchandiseById = async (req, res) => {
@@ -132,6 +137,64 @@ const DeleteMerchandiseById = async (req, res) => {
   }
 };
 
+const GetMerchandiseCategories = async (req, res) => {
+  try {
+    const categories = await getMerchandiseCategories();
+
+    res.status(StatusCodes.OK).json(new BaseResponse({
+      status: StatusCodes.OK,
+      message: 'Kategori merchandise ditemukan',
+      data: categories,
+    }));
+  } catch (error) {
+    const status = error.status || StatusCodes.INTERNAL_SERVER_ERROR;
+    res.status(status).json(new BaseResponse({
+      status,
+      message: error.message,
+    }));
+  }
+};
+
+const CreateMerchandiseCategory = async (req, res) => {
+  try {
+    const record = await createMerchandiseCategory(req.body?.category || req.body?.name);
+
+    res.status(StatusCodes.CREATED).json(new BaseResponse({
+      status: StatusCodes.CREATED,
+      message: 'Kategori merchandise berhasil ditambahkan',
+      data: { category: record.name },
+    }));
+  } catch (error) {
+    const status = error.status || StatusCodes.BAD_REQUEST;
+    res.status(status).json(new BaseResponse({
+      status,
+      message: error.message,
+    }));
+  }
+};
+
+const UpdateMerchandiseCategory = async (req, res) => {
+  try {
+    const { category } = req.params;
+    const result = await updateMerchandiseCategory(
+      decodeURIComponent(category || ''),
+      req.body?.category || req.body?.name,
+    );
+
+    res.status(StatusCodes.OK).json(new BaseResponse({
+      status: StatusCodes.OK,
+      message: 'Kategori merchandise berhasil diperbarui',
+      data: result,
+    }));
+  } catch (error) {
+    const status = error.status || StatusCodes.BAD_REQUEST;
+    res.status(status).json(new BaseResponse({
+      status,
+      message: error.message,
+    }));
+  }
+};
+
 const DeleteMerchandiseCategory = async (req, res) => {
   try {
     const { category } = req.params;
@@ -154,6 +217,9 @@ const DeleteMerchandiseCategory = async (req, res) => {
 module.exports = {
   GetMerchandiseById,
   GetAllMerchandise,
+  GetMerchandiseCategories,
+  CreateMerchandiseCategory,
+  UpdateMerchandiseCategory,
   CreateNewMerchandise,
   UpdateMerchandiseById,
   DeleteMerchandiseById,
