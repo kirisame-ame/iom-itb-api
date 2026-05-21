@@ -1,67 +1,27 @@
 'use strict';
 
+const addIfMissing = async (queryInterface, table, column, def) => {
+  const desc = await queryInterface.describeTable(table);
+  if (!desc[column]) await queryInterface.addColumn(table, column, def);
+};
+
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.addColumn('Transactions', 'paidAt', {
-      type: Sequelize.DATE,
-      allowNull: true,
-    });
-    await queryInterface.addColumn('Transactions', 'paymentType', {
-      type: Sequelize.STRING,
-      allowNull: true,
-    });
-    await queryInterface.addColumn('Transactions', 'vaNumber', {
-      type: Sequelize.STRING,
-      allowNull: true,
-    });
-    await queryInterface.addColumn('Transactions', 'fraudStatus', {
-      type: Sequelize.STRING,
-      allowNull: true,
-    });
-    await queryInterface.addColumn('Transactions', 'expiredAt', {
-      type: Sequelize.DATE,
-      allowNull: true,
-    });
-    await queryInterface.addColumn('Transactions', 'rawNotification', {
-      type: Sequelize.JSON,
-      allowNull: true,
-    });
-    await queryInterface.addColumn('Transactions', 'stockDeducted', {
-      type: Sequelize.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    });
-    await queryInterface.addColumn('Transactions', 'currency', {
-      type: Sequelize.STRING(3),
-      allowNull: false,
-      defaultValue: 'IDR',
-    });
+    await addIfMissing(queryInterface, 'Transactions', 'paidAt', { type: Sequelize.DATE, allowNull: true });
+    await addIfMissing(queryInterface, 'Transactions', 'paymentType', { type: Sequelize.STRING, allowNull: true });
+    await addIfMissing(queryInterface, 'Transactions', 'vaNumber', { type: Sequelize.STRING, allowNull: true });
+    await addIfMissing(queryInterface, 'Transactions', 'fraudStatus', { type: Sequelize.STRING, allowNull: true });
+    await addIfMissing(queryInterface, 'Transactions', 'expiredAt', { type: Sequelize.DATE, allowNull: true });
+    await addIfMissing(queryInterface, 'Transactions', 'rawNotification', { type: Sequelize.JSON, allowNull: true });
+    await addIfMissing(queryInterface, 'Transactions', 'stockDeducted', { type: Sequelize.BOOLEAN, allowNull: false, defaultValue: false });
+    await addIfMissing(queryInterface, 'Transactions', 'currency', { type: Sequelize.STRING(3), allowNull: false, defaultValue: 'IDR' });
 
-    await queryInterface.addColumn('Donations', 'paidAt', {
-      type: Sequelize.DATE,
-      allowNull: true,
-    });
-    await queryInterface.addColumn('Donations', 'paymentType', {
-      type: Sequelize.STRING,
-      allowNull: true,
-    });
-    await queryInterface.addColumn('Donations', 'vaNumber', {
-      type: Sequelize.STRING,
-      allowNull: true,
-    });
-    await queryInterface.addColumn('Donations', 'fraudStatus', {
-      type: Sequelize.STRING,
-      allowNull: true,
-    });
-    await queryInterface.addColumn('Donations', 'rawNotification', {
-      type: Sequelize.JSON,
-      allowNull: true,
-    });
-    await queryInterface.addColumn('Donations', 'currency', {
-      type: Sequelize.STRING(3),
-      allowNull: false,
-      defaultValue: 'IDR',
-    });
+    await addIfMissing(queryInterface, 'Donations', 'paidAt', { type: Sequelize.DATE, allowNull: true });
+    await addIfMissing(queryInterface, 'Donations', 'paymentType', { type: Sequelize.STRING, allowNull: true });
+    await addIfMissing(queryInterface, 'Donations', 'vaNumber', { type: Sequelize.STRING, allowNull: true });
+    await addIfMissing(queryInterface, 'Donations', 'fraudStatus', { type: Sequelize.STRING, allowNull: true });
+    await addIfMissing(queryInterface, 'Donations', 'rawNotification', { type: Sequelize.JSON, allowNull: true });
+    await addIfMissing(queryInterface, 'Donations', 'currency', { type: Sequelize.STRING(3), allowNull: false, defaultValue: 'IDR' });
   },
 
   down: async (queryInterface) => {
