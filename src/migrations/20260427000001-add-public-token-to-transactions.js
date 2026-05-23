@@ -6,10 +6,14 @@ const generateToken = () => `ord_${crypto.randomBytes(24).toString('base64url')}
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.addColumn('Transactions', 'publicToken', {
-      type: Sequelize.STRING(80),
-      allowNull: true,
-    });
+    const desc = await queryInterface.describeTable('Transactions');
+
+    if (!desc.publicToken) {
+      await queryInterface.addColumn('Transactions', 'publicToken', {
+        type: Sequelize.STRING(80),
+        allowNull: true,
+      });
+    }
 
     const [transactions] = await queryInterface.sequelize.query(
       'SELECT id FROM `Transactions` WHERE publicToken IS NULL'
@@ -20,18 +24,17 @@ module.exports = {
       let token = generateToken();
       while (usedTokens.has(token)) token = generateToken();
       usedTokens.add(token);
-
-      await queryInterface.bulkUpdate(
-        'Transactions',
-        { publicToken: token },
-        { id: transaction.id }
-      );
+      await queryInterface.bulkUpdate('Transactions', { publicToken: token }, { id: transaction.id });
     }
 
-    await queryInterface.addIndex('Transactions', ['publicToken'], {
-      name: 'transactions_public_token_unique',
-      unique: true,
-    });
+    const indexes = await queryInterface.showIndex('Transactions');
+    const hasIndex = indexes.some((i) => i.name === 'transactions_public_token_unique');
+    if (!hasIndex) {
+      await queryInterface.addIndex('Transactions', ['publicToken'], {
+        name: 'transactions_public_token_unique',
+        unique: true,
+      });
+    }
 
     await queryInterface.changeColumn('Transactions', 'publicToken', {
       type: Sequelize.STRING(80),
