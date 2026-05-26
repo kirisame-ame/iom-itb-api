@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const JWTValidation = require("../middlewares/auth");
+const requireRoles = require("../middlewares/requireRoles");
+const { COMMUNICATION_ROLES } = require("../utils/roles");
 
 const {
   getTemplates,
@@ -8,8 +10,8 @@ const {
   testSendTemplate,
 } = require("../controllers/emailTemplate");
 
-router.get("/", JWTValidation, getTemplates);
-router.put("/:key", JWTValidation, updateTemplate);
-router.post("/:key/test-send", JWTValidation, testSendTemplate);
+router.get("/", JWTValidation, requireRoles(COMMUNICATION_ROLES), getTemplates);
+router.put("/:key", JWTValidation, requireRoles(COMMUNICATION_ROLES), updateTemplate);
+router.post("/:key/test-send", JWTValidation, requireRoles(COMMUNICATION_ROLES), testSendTemplate);
 
 module.exports = router;

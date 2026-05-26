@@ -1,6 +1,8 @@
 const { Router } = require('express');
 const { Faculties } = require('../models');
 const JWTValidation = require('../middlewares/auth');
+const requireRoles = require('../middlewares/requireRoles');
+const { FINANCE_ROLES } = require('../utils/roles');
 
 const router = Router();
 
@@ -22,7 +24,7 @@ router.get('', async (req, res) => {
   }
 });
 
-router.post('', JWTValidation, async (req, res) => {
+router.post('', JWTValidation, requireRoles(FINANCE_ROLES), async (req, res) => {
   try {
     const payload = pick(req.body);
     if (!payload.name) {
@@ -36,7 +38,7 @@ router.post('', JWTValidation, async (req, res) => {
   }
 });
 
-router.put('/:id', JWTValidation, async (req, res) => {
+router.put('/:id', JWTValidation, requireRoles(FINANCE_ROLES), async (req, res) => {
   try {
     const faculty = await Faculties.findByPk(req.params.id);
     if (!faculty) {
@@ -50,7 +52,7 @@ router.put('/:id', JWTValidation, async (req, res) => {
   }
 });
 
-router.delete('/:id', JWTValidation, async (req, res) => {
+router.delete('/:id', JWTValidation, requireRoles(FINANCE_ROLES), async (req, res) => {
   try {
     const faculty = await Faculties.findByPk(req.params.id);
     if (!faculty) {

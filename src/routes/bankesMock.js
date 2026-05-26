@@ -3,10 +3,11 @@
 const express = require('express');
 const router = express.Router();
 const bankesMockController = require('../controllers/bankesMock');
+const JWTValidation = require('../middlewares/auth');
+const requireRoles = require('../middlewares/requireRoles');
+const { BANTUAN_ROLES } = require('../utils/roles');
 
-// Kami sengaja tidak memasang Middleware JWTValidation sementara agar Anda 
-// bisa langsung / cepat mengujinya di Frontend tanpa takut error 401 Unauthorized.
-router.get('/mahasiswa', bankesMockController.getMahasiswa);
-router.get('/ota', bankesMockController.getOta);
+router.get('/mahasiswa', JWTValidation, requireRoles(BANTUAN_ROLES), bankesMockController.getMahasiswa);
+router.get('/ota', JWTValidation, requireRoles(BANTUAN_ROLES), bankesMockController.getOta);
 
 module.exports = router;

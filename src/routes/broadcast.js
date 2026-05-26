@@ -3,6 +3,8 @@ const multer = require('multer');
 const router = express.Router();
 const { BroadcastSettings, BroadcastLogs } = require('../models');
 const JWTValidation = require('../middlewares/auth');
+const requireRoles = require('../middlewares/requireRoles');
+const { COMMUNICATION_ROLES } = require('../utils/roles');
 const createBroadcastSetting = require('../services/broadcast/createBroadcastSetting');
 const updateBroadcastSetting = require('../services/broadcast/updateBroadcastSetting');
 const deleteBroadcastSetting = require('../services/broadcast/deleteBroadcastSetting');
@@ -26,8 +28,10 @@ const recipientUpload = multer({
   },
 });
 
+const canManageBroadcast = [JWTValidation, requireRoles(COMMUNICATION_ROLES)];
+
 // GET /broadcast/settings
-router.get('/settings', async (req, res) => {
+router.get('/settings', canManageBroadcast, async (req, res) => {
   try {
     const settings = await BroadcastSettings.findAll({ order: [['createdAt', 'DESC']] });
     res.json({ data: settings.map(toBroadcastSettingDto) });
@@ -36,7 +40,7 @@ router.get('/settings', async (req, res) => {
   }
 });
 
-router.post('/settings', JWTValidation, async (req, res) => {
+router.post('/settings', canManageBroadcast, async (req, res) => {
   try {
     const setting = await createBroadcastSetting(req.body);
     res.status(201).json({ data: setting });
@@ -45,7 +49,7 @@ router.post('/settings', JWTValidation, async (req, res) => {
   }
 });
 
-router.put('/settings/:id', JWTValidation, async (req, res) => {
+router.put('/settings/:id', canManageBroadcast, async (req, res) => {
   try {
     const setting = await updateBroadcastSetting(req.params.id, req.body);
     res.json({ data: setting });
@@ -54,7 +58,7 @@ router.put('/settings/:id', JWTValidation, async (req, res) => {
   }
 });
 
-router.delete('/settings/:id', JWTValidation, async (req, res) => {
+router.delete('/settings/:id', canManageBroadcast, async (req, res) => {
   try {
     await deleteBroadcastSetting(req.params.id);
     res.json({ message: 'Deleted' });
@@ -63,7 +67,7 @@ router.delete('/settings/:id', JWTValidation, async (req, res) => {
   }
 });
 
-router.post('/run/:id', JWTValidation, async (req, res) => {
+router.post('/run/:id', canManageBroadcast, async (req, res) => {
   try {
     const result = await runBroadcast(req.params.id);
     res.json(result);
@@ -73,7 +77,7 @@ router.post('/run/:id', JWTValidation, async (req, res) => {
 });
 
 // GET /broadcast/logs
-router.get('/logs', async (req, res) => {
+router.get('/logs', canManageBroadcast, async (req, res) => {
   try {
     const { settingId, page = 1, limit = 20 } = req.query;
     const where = settingId ? { broadcastSettingId: settingId } : {};
@@ -91,7 +95,7 @@ router.get('/logs', async (req, res) => {
 });
 
 // GET /broadcast/members — list manual recipients
-router.get('/members', async (req, res) => {
+router.get('/members', canManageBroadcast, async (req, res) => {
   try {
     const data = await getBroadcastRecipients();
     res.json({ data });
@@ -100,7 +104,7 @@ router.get('/members', async (req, res) => {
   }
 });
 
-router.post('/members', JWTValidation, async (req, res) => {
+router.post('/members', canManageBroadcast, async (req, res) => {
   try {
     const recipient = await createBroadcastRecipient(req.body);
     res.status(201).json({ data: recipient });
@@ -109,7 +113,7 @@ router.post('/members', JWTValidation, async (req, res) => {
   }
 });
 
-router.post('/members/import', JWTValidation, recipientUpload.single('file'), async (req, res) => {
+router.post('/members/import', canManageBroadcast, recipientUpload.single('file'), async (req, res) => {
   try {
     const result = await importBroadcastRecipients(req.file);
     res.status(201).json(result);
@@ -118,7 +122,7 @@ router.post('/members/import', JWTValidation, recipientUpload.single('file'), as
   }
 });
 
-router.put('/members/:id', JWTValidation, async (req, res) => {
+router.put('/members/:id', canManageBroadcast, async (req, res) => {
   try {
     const data = await updateBroadcastRecipient(req.params.id, req.body);
     res.json({ data, message: 'Penerima berhasil diperbarui' });
@@ -127,7 +131,7 @@ router.put('/members/:id', JWTValidation, async (req, res) => {
   }
 });
 
-router.delete('/members/:id', JWTValidation, async (req, res) => {
+router.delete('/members/:id', canManageBroadcast, async (req, res) => {
   try {
     await deleteBroadcastRecipient(req.params.id);
     res.json({ message: 'Deleted' });

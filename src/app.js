@@ -94,7 +94,7 @@ app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', origin);
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Selected-Role');
   }
   
   if (req.method === 'OPTIONS') {
@@ -115,7 +115,6 @@ app.use((req, res, next) => {
   express.static(path.join(__dirname, ''))(req, res, next);
 });
 
-app.use('/email-templates', require('./routes/emailTemplate'));
 app.use(router);
 
 

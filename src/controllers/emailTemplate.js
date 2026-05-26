@@ -4,12 +4,51 @@ const { wrapPengajuanEmailHtml, logoAttachment, logoWhiteAttachment } = require(
 const sendEmail = require('../utils/mailer');
 const sendWhatsApp = require('../utils/whatsapp');
 const { normalizeWhatsAppRecipient } = require('../utils/whatsappPhone');
+const { extractRoles } = require('../middlewares/requireRoles');
+const { ROLES } = require('../utils/roles');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const FINANCE_TEMPLATE_KEYS = new Set([
+  'donation_payment_confirmation',
+  'transaction_payment_confirmation',
+  'donation_payment_whatsapp',
+  'transaction_payment_whatsapp',
+]);
+
+const FINANCE_TEMPLATE_PATTERNS = [
+  /donation/i,
+  /donasi/i,
+  /payment/i,
+  /pembayaran/i,
+  /transaction/i,
+  /transaksi/i,
+  /merchandise/i,
+];
+
+const canAccessAllTemplates = (roles = []) =>
+  roles.some((role) => [
+    ROLES.ADMIN,
+    ROLES.PENGURUS_BIDANG_1,
+    ROLES.SEKRETARIAT,
+  ].includes(role));
+
+const isFinanceTemplate = (template = {}) => {
+  if (FINANCE_TEMPLATE_KEYS.has(template.key)) return true;
+  const haystack = [template.key, template.title, template.subject].filter(Boolean).join(' ');
+  return FINANCE_TEMPLATE_PATTERNS.some((pattern) => pattern.test(haystack));
+};
+
+const canAccessTemplate = (template, roles) => (
+  canAccessAllTemplates(roles)
+  || (roles.includes(ROLES.BENDAHARA) && isFinanceTemplate(template))
+);
+
+const getRequestRoles = (req, res) => extractRoles(req.user || res.locals.user);
 
 const getTemplates = async (req, res) => {
   try {
     const { channel } = req.query;
+    const roles = getRequestRoles(req, res);
     const where = {};
     if (channel) where.channel = channel;
 
@@ -18,7 +57,7 @@ const getTemplates = async (req, res) => {
       order: [['channel', 'ASC'], ['id', 'ASC']],
     });
 
-    return res.json(templates);
+    return res.json(templates.filter((template) => canAccessTemplate(template, roles)));
   } catch (error) {
     console.error(error);
     return res.status(500).json({
@@ -32,11 +71,16 @@ const updateTemplate = async (req, res) => {
   try {
     const { key } = req.params;
     const { subject, body } = req.body;
+    const roles = getRequestRoles(req, res);
 
     const template = await EmailTemplate.findOne({ where: { key } });
 
     if (!template) {
       return res.status(404).json({ message: 'Template tidak ditemukan' });
+    }
+
+    if (!canAccessTemplate(template, roles)) {
+      return res.status(403).json({ message: 'Anda tidak memiliki akses ke template ini' });
     }
 
     const updateData = {};
@@ -66,6 +110,7 @@ const testSendTemplate = async (req, res) => {
   try {
     const { key } = req.params;
     const { recipient, variables = {} } = req.body;
+    const roles = getRequestRoles(req, res);
 
     if (!recipient) {
       return res.status(400).json({ message: 'Recipient wajib diisi' });
@@ -74,6 +119,10 @@ const testSendTemplate = async (req, res) => {
     const template = await EmailTemplate.findOne({ where: { key } });
     if (!template) {
       return res.status(404).json({ message: 'Template tidak ditemukan' });
+    }
+
+    if (!canAccessTemplate(template, roles)) {
+      return res.status(403).json({ message: 'Anda tidak memiliki akses ke template ini' });
     }
 
     if (template.channel === 'email') {

@@ -7,13 +7,17 @@ const {
   DeleteDanaBantuanById,
 } = require('../controllers/danaBantuan');
 const JWTValidation = require('../middlewares/auth')
+const requireRoles = require('../middlewares/requireRoles');
+const { DANA_BANTUAN_ROLES } = require('../utils/roles');
 
 const router = Router();
 
-router.get('', JWTValidation, GetAllDanaBantuan);
-router.get('/:id', [], GetDanaBantuanById);
-router.post('', JWTValidation, CreateNewDanaBantuan);
-router.put('/:id', JWTValidation, UpdateDanaBantuanById);
-router.delete('/:id', JWTValidation, DeleteDanaBantuanById);
+const canManageDanaBantuan = [JWTValidation, requireRoles(DANA_BANTUAN_ROLES)];
+
+router.get('', canManageDanaBantuan, GetAllDanaBantuan);
+router.get('/:id', canManageDanaBantuan, GetDanaBantuanById);
+router.post('', canManageDanaBantuan, CreateNewDanaBantuan);
+router.put('/:id', canManageDanaBantuan, UpdateDanaBantuanById);
+router.delete('/:id', canManageDanaBantuan, DeleteDanaBantuanById);
 
 module.exports = router;
