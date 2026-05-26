@@ -23,6 +23,16 @@ const normalizeAllowedRoles = (roles) => {
   return roles;
 };
 
+const getEffectiveRoles = (req, userRoles) => {
+  const selectedRole = req.get('x-selected-role');
+
+  if (!selectedRole) {
+    return userRoles;
+  }
+
+  return userRoles.includes(selectedRole) ? [selectedRole] : [];
+};
+
 const requireRoles = (...roles) => {
   const allowedRoles = normalizeAllowedRoles(roles).filter(Boolean);
 
@@ -42,7 +52,7 @@ const requireRoles = (...roles) => {
       );
     }
 
-    const userRoles = extractRoles(user);
+    const userRoles = getEffectiveRoles(req, extractRoles(user));
     const hasAllowedRole = allowedRoles.some((role) => userRoles.includes(role));
 
     if (!hasAllowedRole) {

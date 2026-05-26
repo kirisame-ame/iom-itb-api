@@ -3,6 +3,7 @@ const BaseResponse = require('../schemas/responses/BaseResponse');
 const {
   buildAccessibleApps,
   getAppUrl,
+  getWebRedirectUrl,
   getUserRolesFromToken,
   isAnyRoleAllowed,
   isRoleAllowedForApp,
@@ -111,7 +112,7 @@ const selectApp = async (req, res) => {
       );
     }
 
-    const redirectUrl = appId === 'web' ? '/dashboard' : getAppUrl(appId);
+    const redirectUrl = appId === 'web' ? getWebRedirectUrl(role) : getAppUrl(appId);
 
     if (!redirectUrl || redirectUrl === '#') {
       return res.status(StatusCodes.SERVICE_UNAVAILABLE).json(
