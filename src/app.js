@@ -8,9 +8,18 @@ const express = require('express');
 const morgan = require('morgan');
 const helmet = require('helmet');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const router = require('./routes/index');
+
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { status: 429, message: 'Too many requests, please try again later.' },
+});
 
 // Konfigurasi CORS - Dynamic origins dari environment variables
 const getCorsOrigins = () => {
@@ -105,7 +114,9 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json());
+app.use(globalLimiter);
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

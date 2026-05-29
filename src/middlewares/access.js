@@ -5,6 +5,29 @@ const BaseError = require("../schemas/responses/BaseError");
 const { Role } = require("../models");
 const { match } = require("path-to-regexp");
 
+const extractUserRoles = async (user) => {
+  const directRoles = [];
+
+  if (Array.isArray(user.roles) && user.roles.length > 0) {
+    directRoles.push(...user.roles);
+  }
+
+  if (user.roleName) {
+    directRoles.push(user.roleName);
+  }
+
+  if (directRoles.length > 0) {
+    return [...new Set(directRoles)];
+  }
+
+  if (user.roleId) {
+    const roleFromId = await extractRoleNameFromRoleId(user.roleId);
+    return roleFromId ? [roleFromId] : [];
+  }
+
+  return [];
+};
+
 const validateAccess = async (req, res, next) => {
   try {
     if (!res.locals.user || !res.locals.user.isVerified) {
@@ -32,29 +55,6 @@ const validateAccess = async (req, res, next) => {
     }
 
     next();
-
-const extractUserRoles = async (user) => {
-  const directRoles = [];
-
-  if (Array.isArray(user.roles) && user.roles.length > 0) {
-    directRoles.push(...user.roles);
-  }
-
-  if (user.roleName) {
-    directRoles.push(user.roleName);
-  }
-
-  if (directRoles.length > 0) {
-    return [...new Set(directRoles)];
-  }
-
-  if (user.roleId) {
-    const roleFromId = await extractRoleNameFromRoleId(user.roleId);
-    return roleFromId ? [roleFromId] : [];
-  }
-
-  return [];
-};
   } catch (error) {
     const status = error?.status || StatusCodes.INTERNAL_SERVER_ERROR;
     res

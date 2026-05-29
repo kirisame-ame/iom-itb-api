@@ -19,7 +19,7 @@ const GetMerchandises = async ({ id = null, search = '', page = 1, limit = 5 }) 
 
   // Logika untuk pencarian semua merchandise
   const pageNumber = parseInt(page) || 1;
-  const pageLimit = parseInt(limit);
+  const pageLimit = Math.min(parseInt(limit) || 10, 100);
   const offset = (pageNumber - 1) * pageLimit;
   
   const options = {
