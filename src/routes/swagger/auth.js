@@ -1,126 +1,126 @@
 /**
  * @swagger
  *
- * /auth/register:
- *   post:
+ * /auth/me:
+ *   get:
  *     security:
  *       - bearerAuth: []
- *     summary: create new user
+ *     summary: Get current user info
  *     tags: [Auth]
- *     requestBody:
- *          content:
- *              multipart/form-data:
- *                  schema:
- *                      type: object
- *                      properties:
- *                          email:
- *                              description: user email 
- *                              type: string
- *                              example: test@gmail.com
- *                          password:
- *                              description: user password 
- *                              type: string
- *                              example: test123
- *                          confirmPassword:
- *                              description: confirm password user 
- *                              type: string
- *                              example: test123
- *                          roleName:
- *                              description: confirm password user 
- *                              type: string
- *                              example: Admin
- *                          firstName:
- *                              description: your first name
- *                              type: string 
- *                              example: "John"
- *                          lastName:
- *                              description: your last name
- *                              type: string 
- *                              example: "Doe"
- *                          birthDate:
- *                              description: your birth date
- *                              type: Date
- *                              example: "2000-01-01"
- *                          gender:
- *                              description: your gender
- *                              type: string 
- *                              example: "Laki_laki"
- *                          phone:
- *                             description: your phone number
- *                             type: string
- *                             example: "08123456789"
- *                          address:
- *                             description: your address
- *                             type: string
- *                             example: "Jalan Jendral Sudirman No 1"
- *                          province:
- *                              description: province where your city is located
- *                              type: string 
- *                              example: "Jawa Barat"
- *                          regencies:
- *                              description: city where you live
- *                              type: string 
- *                              example: "Bandung"
- *                          image:
- *                              description: file to upload
- *                              type: file
- *                          institutionName:
- *                              description: your institution where you study or work
- *                              type: string 
- *                              example: "Universitas Pasundan"
- *                          field:
- *                              description: your focus on the study field
- *                              type: string 
- *                              example: "Teknik Informatika"
- *                          pupils:
- *                              description: your unique ID number
- *                              type: string 
- *                              example: "203040111"
- *                          proof:
- *                              description: file to upload
- *                              type: file
  *     responses:
  *       200:
- *         description: User baru berhasil dibuat
- *
+ *         description: Current user data
+ *       401:
+ *         description: Unauthorized
  *       500:
  *         description: Internal Server Error
  *
- * /auth/login:
- *   post:
- *      summary: login for user
- *      tags: [Auth]
- *      requestBody:
- *          content:
- *              application/json:
- *                  schema:
- *                      type: object
- *                      properties:
- *                          email:
- *                              description: username user or user phone number
- *                              type: string
- *                              example: test@gmail.com
- *                          password:
- *                              description: user password
- *                              type: string
- *                              example: test123
- *      responses:
- *          200:
- *              description: login token
- *
- *          500:
- *              description: Some server error
- *
- * /auth/logout:
- *   post:
- *      security:
+ * /auth/apps:
+ *   get:
+ *     security:
  *       - bearerAuth: []
- *      summary: change password for user
- *      tags: [Auth]
- *      responses:
- *          200:
- *              description: login token
+ *     summary: Get user apps
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: User apps list
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal Server Error
  *
- *          500:
- *              description: Some server error
+ * /auth/select:
+ *   post:
+ *     security:
+ *       - bearerAuth: []
+ *     summary: Select app
+ *     tags: [Auth]
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               appId:
+ *                 type: string
+ *                 description: App ID to select
+ *     responses:
+ *       200:
+ *         description: App selected successfully
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal Server Error
+ *
+ * /auth/register:
+ *   post:
+ *     security:
+ *       - ApiKeyAuth: []
+ *     summary: Register new user
+ *     tags: [Auth]
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: test@gmail.com
+ *               password:
+ *                 type: string
+ *                 example: test123
+ *               confirmPassword:
+ *                 type: string
+ *                 example: test123
+ *               roleName:
+ *                 type: string
+ *                 example: Admin
+ *               firstName:
+ *                 type: string
+ *                 example: John
+ *               lastName:
+ *                 type: string
+ *                 example: Doe
+ *               birthDate:
+ *                 type: string
+ *                 format: date
+ *                 example: 2000-01-01
+ *               gender:
+ *                 type: string
+ *                 example: Laki_laki
+ *               phone:
+ *                 type: string
+ *                 example: 08123456789
+ *               address:
+ *                 type: string
+ *                 example: Jalan Jendral Sudirman No 1
+ *               province:
+ *                 type: string
+ *                 example: Jawa Barat
+ *               regencies:
+ *                 type: string
+ *                 example: Bandung
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *               institutionName:
+ *                 type: string
+ *                 example: Universitas Pasundan
+ *               field:
+ *                 type: string
+ *                 example: Teknik Informatika
+ *               pupils:
+ *                 type: string
+ *                 example: 203040111
+ *               proof:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: User registered successfully
+ *       400:
+ *         description: Bad Request
+ *       500:
+ *         description: Internal Server Error
  */

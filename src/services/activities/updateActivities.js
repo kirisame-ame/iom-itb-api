@@ -1,8 +1,52 @@
-const { Activities, sequelize } = require('../../models');
+const { Activities, Tags, sequelize } = require('../../models');
 const { StatusCodes } = require('http-status-codes');
 const BaseError = require('../../schemas/responses/BaseError');
-const fs = require('fs');
-const path = require('path');
+const sanitizeHtml = require('sanitize-html');
+
+const sanitizeDescription = (html) => {
+  return sanitizeHtml(html, {
+    allowedTags: [
+      'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'strong', 'em', 'u', 's', 'blockquote',
+      'ul', 'ol', 'li', 'img', 'a', 'br', 'div', 'iframe'
+    ],
+    allowedAttributes: {
+      'img': ['src', 'alt', 'style'],
+      'a': ['href', 'target', 'rel'],
+      'p': ['style'],
+      'h1': ['style'],
+      'h2': ['style'],
+      'h3': ['style'],
+      'div': ['data-youtube-video'],                         
+      'iframe': [                                            
+        'src', 'width', 'height',
+        'allowfullscreen', 'autoplay',
+        'disablekbcontrols', 'enableiframeapi',
+        'endtime', 'ivloadpolicy', 'loop',
+        'modestbranding', 'origin', 'playlist',
+        'rel', 'start', 'frameborder', 'allow'
+      ],
+    },
+    allowedStyles: {
+      '*': {
+        'text-align': [/^left$/, /^right$/, /^center$/, /^justify$/],
+        'width': [/^\d+(%|px)$/],
+        'height': [/.*/],
+      },
+    },
+    allowedSchemesByTag: {
+      'img': ['https', 'http'],
+      'a': ['https'],
+      'iframe': ['https'],              
+    },
+    transformTags: {
+      'a': (tagName, attribs) => ({
+        tagName,
+        attribs: { ...attribs, target: '_blank', rel: 'noopener noreferrer' }
+      })
+    }
+  });
+};
 
 const UpdateActivities = async (id, body) => {
   const transaction = await sequelize.transaction();
@@ -17,16 +61,15 @@ const UpdateActivities = async (id, body) => {
       });
     }
 
-    const { title, date, description, url, image } = body;
+    const { title, date, description, url, image, status, tags, contributors } = body;
 
-    if (!title && !date && !description && !url && !image) {
+    if (!title && !date && !description && !url && !image && !status && tags === undefined) {
       throw new BaseError({
         status: StatusCodes.BAD_REQUEST,
-        message: 'Setidaknya salah satu dari judul, tanggal, atau gambar harus diisi untuk pembaruan.',
+        message: 'Setidaknya salah satu field harus diisi untuk pembaruan.',
       });
     }
 
-    // Cek apakah URL sudah digunakan oleh aktivitas lain
     if (url && url !== activity.url) {
       const existingActivity = await Activities.findOne({ where: { url } });
       if (existingActivity) {
@@ -37,27 +80,50 @@ const UpdateActivities = async (id, body) => {
       }
     }
 
-    // Perbarui aktivitas dengan data baru
-    const updatedActivity = await Activities.update(
+    if (tags !== undefined && tags.length > 3) {
+      throw new BaseError({
+        status: StatusCodes.BAD_REQUEST,
+        message: 'Maksimal 3 tag per kegiatan.',
+      });
+    }
+    console.log('RAW DESCRIPTION:', description);
+
+    const cleanDescription = description !== undefined
+      ? sanitizeDescription(description)
+      : activity.description;
+
+    console.log('CLEAN DESCRIPTION:', cleanDescription);
+
+    await Activities.update(
       {
         title: title || activity.title,
         image: image || activity.image,
-        description: description || activity.description,
+        description: cleanDescription,
         date: date !== undefined ? date : activity.date,
         url: url !== undefined ? url : activity.url,
+        status: status || activity.status,
+        contributors: contributors !== undefined ? contributors : activity.contributors,
       },
-      {
-        where: { id },
-        transaction,
-      }
+      { where: { id }, transaction }
     );
+
+    if (tags !== undefined) {
+      const tagInstances = await Promise.all(
+        tags.map(name => Tags.findOrCreate({ where: { name: name.trim().toLowerCase() } }))
+      );
+      await activity.setTags(tagInstances.map(([tag]) => tag), { transaction });
+    }
 
     await transaction.commit();
 
-    return updatedActivity;
-  } catch (error) {
-    await transaction.rollback(); // Rollback transaksi jika terjadi kesalahan
+    const result = await Activities.findOne({
+      where: { id },
+      include: [{ model: Tags, as: 'tags' }]
+    });
 
+    return result;
+  } catch (error) {
+    await transaction.rollback();
     throw new BaseError({
       status: error.status || StatusCodes.INTERNAL_SERVER_ERROR,
       message: `Gagal memperbarui aktivitas: ${error.message || error}`,

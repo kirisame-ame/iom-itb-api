@@ -58,13 +58,80 @@ module.exports = (sequelize, DataTypes) => {
     options: {
       type: DataTypes.JSON,  // Menyimpan data tambahan dalam bentuk JSON
       allowNull: true
-    },    
+    },
     date: {
       type: DataTypes.DATE,
       allowNull: true
     },
     bank: {
       type: DataTypes.STRING,
+      allowNull: true
+    },
+    donationType: {
+      type: DataTypes.ENUM(
+        'iuran_sukarela',
+        'kontribusi_anggota',
+        'kontribusi_donatur',
+        'pembelian_merchandise',
+        'kontribusi_sukarela'
+      ),
+      allowNull: true
+    },
+    facultyId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: { model: 'Faculties', key: 'id' }
+    },
+    kodeUnik: {
+      type: DataTypes.STRING(3),
+      allowNull: true
+    },
+    paymentMethod: {
+      type: DataTypes.ENUM('manual', 'midtrans'),
+      allowNull: false,
+      defaultValue: 'manual'
+    },
+    paymentStatus: {
+      type: DataTypes.ENUM('pending', 'settlement', 'expired', 'failed', 'refunded'),
+      allowNull: false,
+      defaultValue: 'pending'
+    },
+    midtransOrderId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true
+    },
+    midtransTransactionId: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    grossAmount: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: true
+    },
+    currency: {
+      type: DataTypes.STRING(3),
+      allowNull: false,
+      defaultValue: 'IDR'
+    },
+    paidAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    paymentType: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    vaNumber: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    fraudStatus: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    rawNotification: {
+      type: DataTypes.JSON,
       allowNull: true
     }
   }, {

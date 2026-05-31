@@ -1,38 +1,89 @@
-const { Activities } = require('../../models');
+const { Activities, Tags } = require('../../models');
 const { Op } = require('sequelize');
 
-const GetActivities = async ({ slug = null, search = '', page = 1, limit = 10 }) => {
-  if (slug) {
+const GetActivities = async ({ slug = null, id = null, search = '', page = 1, limit = 10, status = null, sort = 'newest' }) => {
+
+  if (id) {
     try {
-      const activity = await Activities.findOne({ where: { url: slug } });
-      if (!activity) {
-        return { message: `Kegiatan dengan slug ${slug} tidak ditemukan` };
-      }
+      const activity = await Activities.findOne({
+        where: {
+          id,
+          ...(status && { status }),
+        },
+        include: [{ model: Tags, as: 'tags' }]
+      });
+      if (!activity) return { message: `Activity tidak ditemukan` };
       return activity;
     } catch (error) {
       return { message: `Terjadi kesalahan: ${error.message}` };
     }
   }
 
-  // Logika untuk pencarian semua activities
+  if (slug) {
+    try {
+      const decodedSlug = decodeURIComponent(slug);
+      const activity = await Activities.findOne({
+        where: {
+          ...(status && { status }),
+          [Op.or]: [
+            { url: slug },
+            { url: decodedSlug },
+            { title: decodedSlug },
+          ]
+        },
+        include: [{ model: Tags, as: 'tags' }]
+      });
+      if (!activity) return { message: `Kegiatan tidak ditemukan` };
+      return activity;
+    } catch (error) {
+      return { message: `Terjadi kesalahan: ${error.message}` };
+    }
+  }
+
   const pageNumber = parseInt(page) || 1;
   const pageLimit = parseInt(limit);
   const offset = (pageNumber - 1) * pageLimit;
+
+  const getOrder = () => {
+    switch (sort) {
+      case 'oldest': return [['createdAt', 'ASC']];
+      case 'az': return [['title', 'ASC']];
+      case 'za': return [['title', 'DESC']];
+      default: return [['createdAt', 'DESC']];
+    }
+  };
 
   const options = {
     where: {},
     limit: pageLimit,
     offset,
-    order: [['createdAt', 'DESC']],
+    order: getOrder(),
+    include: [{ model: Tags, as: 'tags' }],
+    distinct: true,
   };
 
+  if (status && ['draft', 'published'].includes(status)) {
+    options.where.status = status;
+  }
+
   if (search) {
-    options.where.title = { [Op.like]: `%${search}%` };
+    options.where[Op.or] = [
+      { title: { [Op.like]: `%${search}%` } },
+      { description: { [Op.like]: `%${search}%` } },
+      { '$tags.name$': { [Op.like]: `%${search}%` } }
+    ];
+    options.subQuery = false;
+    options.include = [
+      {
+        model: Tags,
+        as: 'tags',
+        required: false, 
+      }
+    ];
   }
 
   try {
     const { rows, count } = await Activities.findAndCountAll(options);
-
     return {
       data: rows,
       total: count,
@@ -41,18 +92,9 @@ const GetActivities = async ({ slug = null, search = '', page = 1, limit = 10 })
     };
   } catch (error) {
     console.error('Database error in getActivities:', error);
-    
-    // Check if it's a connection timeout error
     if (error.message.includes('ETIMEDOUT') || error.message.includes('connect')) {
-      // Return empty data instead of throwing error for better UX
-      return {
-        data: [],
-        total: 0,
-        currentPage: pageNumber,
-        totalPages: 0,
-      };
+      return { data: [], total: 0, currentPage: pageNumber, totalPages: 0 };
     }
-    
     throw new Error(`Gagal mengambil data Kegiatan: ${error.message}`);
   }
 };

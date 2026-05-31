@@ -3,18 +3,24 @@ const ROLE_ACCESS_MAP = {
     'web',
     'aplikasi-bankes',
     'aplikasi-ota',
-    'aplikasi-akunting',
-    'aplikasi-sekretariat',
-    'aplikasi-issumit',
     'aplikasi-oki-manajemen-informasi',
   ],
-  'pengurus-bidang-1': ['web', 'aplikasi-issumit', 'aplikasi-oki-manajemen-informasi'],
+  'pengurus-bidang-1': ['web', 'aplikasi-oki-manajemen-informasi'],
   'pengurus-bidang-2': ['aplikasi-bankes', 'aplikasi-ota'],
   mahasiswa: ['aplikasi-ota'],
   'orang-tua-asuh': ['aplikasi-bankes'],
   'volunteer-pewawancara': ['aplikasi-bankes'],
-  sekretariat: ['aplikasi-sekretariat'],
-  bendahara: ['aplikasi-akunting'],
+  sekretariat: ['web'],
+  bendahara: ['web'],
+  'penulis-konten': ['web'],
+};
+
+const WEB_ROLE_LABELS = {
+  admin: 'Dashboard Admin',
+  'pengurus-bidang-1': 'Dashboard Pengurus Bidang 1',
+  sekretariat: 'Dashboard Sekretariat',
+  bendahara: 'Dashboard Bendahara',
+  'penulis-konten': 'Ruang Penulis Konten',
 };
 
 const APP_CATALOG = {
@@ -30,7 +36,7 @@ const APP_CATALOG = {
   },
   'aplikasi-bankes': {
     id: 'aplikasi-bankes',
-    name: 'Aplikasi Bankes',
+    name: 'Bankes',
     description: 'Modul bantuan dan kesejahteraan',
     iconKey: 'finance',
     color: '#0f766e',
@@ -40,7 +46,7 @@ const APP_CATALOG = {
   },
   'aplikasi-ota': {
     id: 'aplikasi-ota',
-    name: 'Aplikasi OTA',
+    name: 'OTA',
     description: 'Modul orang tua asuh',
     iconKey: 'globe',
     color: '#7c3aed',
@@ -48,39 +54,9 @@ const APP_CATALOG = {
     envKey: 'SSO_APP_URL_APLIKASI_OTA',
     defaultUrl: '#',
   },
-  'aplikasi-akunting': {
-    id: 'aplikasi-akunting',
-    name: 'Aplikasi Akunting',
-    description: 'Modul akunting dan keuangan',
-    iconKey: 'finance',
-    color: '#b45309',
-    colorLight: '#fffbeb',
-    envKey: 'SSO_APP_URL_APLIKASI_AKUNTING',
-    defaultUrl: '#',
-  },
-  'aplikasi-sekretariat': {
-    id: 'aplikasi-sekretariat',
-    name: 'Aplikasi Sekretariat',
-    description: 'Modul sekretariat',
-    iconKey: 'dashboard',
-    color: '#334155',
-    colorLight: '#f8fafc',
-    envKey: 'SSO_APP_URL_APLIKASI_SEKRETARIAT',
-    defaultUrl: '#',
-  },
-  'aplikasi-issumit': {
-    id: 'aplikasi-issumit',
-    name: 'Aplikasi ISSUMIT',
-    description: 'Modul ISSUMIT',
-    iconKey: 'globe',
-    color: '#1d4ed8',
-    colorLight: '#dbeafe',
-    envKey: 'SSO_APP_URL_APLIKASI_ISSUMIT',
-    defaultUrl: '#',
-  },
   'aplikasi-oki-manajemen-informasi': {
     id: 'aplikasi-oki-manajemen-informasi',
-    name: 'Aplikasi OKI Manajemen Informasi',
+    name: 'Aplikasi OKI',
     description: 'Modul OKI manajemen informasi',
     iconKey: 'dashboard',
     color: '#166534',
@@ -109,6 +85,26 @@ function getAppUrl(appId) {
   return process.env[app.envKey] || app.defaultUrl;
 }
 
+function getWebRedirectUrl(role) {
+  return role === 'penulis-konten' ? '/kegiatan' : '/dashboard';
+}
+
+function getAppDisplayName(app, eligibleRoles) {
+  if (app.id === 'web' && eligibleRoles.length === 1) {
+    return WEB_ROLE_LABELS[eligibleRoles[0]] || app.name;
+  }
+
+  return app.name;
+}
+
+function getRoleDisplayName(role, appId) {
+  if (appId === 'web') {
+    return WEB_ROLE_LABELS[role] || toDisplayRole(role);
+  }
+
+  return toDisplayRole(role);
+}
+
 function getAccessibleAppIds(roles) {
   const appSet = new Set();
   roles.forEach((role) => {
@@ -127,7 +123,7 @@ function buildAccessibleApps(roles) {
 
       return {
         id: app.id,
-        name: app.name,
+        name: getAppDisplayName(app, eligibleRoles),
         description: app.description,
         url: getAppUrl(app.id),
         color: app.color,
@@ -135,8 +131,8 @@ function buildAccessibleApps(roles) {
         iconKey: app.iconKey,
         roles: eligibleRoles.map((role) => ({
           id: role,
-          name: toDisplayRole(role),
-          description: `Akses sebagai ${toDisplayRole(role)}`,
+          name: getRoleDisplayName(role, app.id),
+          description: `Akses sebagai ${getRoleDisplayName(role, app.id)}`,
         })),
       };
     })
@@ -156,6 +152,7 @@ module.exports = {
   ROLE_ACCESS_MAP,
   buildAccessibleApps,
   getAppUrl,
+  getWebRedirectUrl,
   getUserRolesFromToken,
   isAnyRoleAllowed,
   isRoleAllowedForApp,

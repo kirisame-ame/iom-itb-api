@@ -7,14 +7,17 @@ const {
   DeleteUserById,
 } = require('../controllers/users'); // Updated to 'transaction'
 const upload = require('../middlewares/multer');
+const JWTValidation = require('../middlewares/auth');
+const requireRoles = require('../middlewares/requireRoles');
+const { ADMIN_FULL_ROLES } = require('../utils/roles');
 
 const router = Router();
+const canManageUsers = [JWTValidation, requireRoles(ADMIN_FULL_ROLES)];
 
-router.get('', [], GetAllUser); // Updated to 'GetAllUser'
-router.get('/:id', [], GetUserById); // Updated to 'GetUserById'
-router.get('', [], GetAllUser); // Added route for GetTransactionByCode
-router.post('', upload.fields([{ name: 'photo', maxCount: 1 }]), CreateNewUser); // Updated to 'CreateNewUser'
-router.put('/:id', upload.fields([{ name: 'photo', maxCount: 1 }]), UpdateUserById); // Updated to 'UpdateUserById'
-router.delete('/:id', [], DeleteUserById); // Updated to 'DeleteUserById'
+router.get('', canManageUsers, GetAllUser);
+router.get('/:id', canManageUsers, GetUserById);
+router.post('', canManageUsers, upload.fields([{ name: 'photo', maxCount: 1 }]), CreateNewUser);
+router.put('/:id', canManageUsers, upload.fields([{ name: 'photo', maxCount: 1 }]), UpdateUserById);
+router.delete('/:id', canManageUsers, DeleteUserById);
 
 module.exports = router;

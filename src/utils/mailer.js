@@ -1,43 +1,56 @@
-// require('dotenv').config();
+const nodemailer = require('nodemailer');
 
-// const nodemailer = require('nodemailer');
-// const { google } = require('googleapis');
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.MAIL_USER,
+    pass: process.env.MAIL_PASS,
+  },
+});
 
-// //credentials
+/**
+ * @typedef {Object} MailAttachment
+ * @property {string} filename
+ * @property {string|Buffer} [path]
+ * @property {string|Buffer} [content]
+ * @property {string} [cid]
+ * @property {string} [contentType]
+ */
 
-// const oAuth2Client = new google.auth.OAuth2(
-//   process.env.MAIL_CLIENT_ID,
-//   process.env.MAIL_CLIENT_SECRET,
-//   process.env.MAIL_REDIRECT_URL,
-// );
+/**
+ * @typedef {Object} SendEmailInput
+ * @property {string|string[]} to
+ * @property {string|string[]} [cc]
+ * @property {string|string[]} [bcc]
+ * @property {string} subject
+ * @property {string} html
+ * @property {string} [text]
+ * @property {MailAttachment[]} [attachments]
+ */
 
-// oAuth2Client.setCredentials({
-//   refresh_token: process.env.MAIL_REFRESH_TOKEN,
-// });
+/**
+ * @param {SendEmailInput} input
+ */
+const sendEmail = async ({ to, cc, bcc, subject, html, text, attachments }) => {
+  if (!process.env.MAIL_USER || !process.env.MAIL_PASS) return;
+  try {
+    const info = await transporter.sendMail({
+      from: `"IOM ITB" <${process.env.MAIL_USER}>`,
+      to,
+      cc,
+      bcc,
+      subject,
+      html,
+      text,
+      attachments,
+    });
+    console.log(`[Email] Sent to ${to}: ${info.messageId}`);
+    return info;
+  } catch (err) {
+    console.error('[Email] Failed to send:', err.message);
+  }
+};
 
-// // Function to generate OAuth2 access token
-// const getAccessToken = () => {
-//     return new Promise((resolve, reject) => {
-//       oAuth2Client.getAccessToken((err, token) => {
-//         if (err) {
-//           reject(err);
-//         } else {
-//           resolve(token);
-//         }
-//       });
-//     });
-//   };
-
-// const transporter = nodemailer.createTransport({
-//     service: 'gmail',
-//     auth: {
-//         type: 'OAuth2',
-//         user: process.env.MAIL_USER,
-//         clientId: process.env.MAIL_CLIENT_ID,
-//         clientSecret: process.env.MAIL_CLIENT_SECRET,
-//         refreshToken: process.env.MAIL_REFRESH_TOKEN,
-//         accessToken: getAccessToken(),
-//     },
-// });
-
-// module.exports = transporter;
+module.exports = sendEmail;

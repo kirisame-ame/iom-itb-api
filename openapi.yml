@@ -1,0 +1,1831 @@
+openapi: 3.0.3
+info:
+  title: IOM ITB API
+  version: 1.0.0
+  description: |
+    OpenAPI specification for IOM ITB backend API.
+
+    Authentication:
+    - Most admin endpoints require `Authorization: Bearer <JWT>`.
+    - `/auth/register` requires `x-api-key`.
+    - Tally webhook endpoints are intended to be called by Tally webhook integration.
+    - Midtrans notification endpoint is intended to be called by Midtrans and may be IP allowlisted.
+servers:
+  - url: http://localhost:3000
+    description: Local development
+  - url: https://api.iom-itb.id
+    description: Production
+
+tags:
+  - name: Health
+  - name: Auth
+  - name: Dashboard
+  - name: Activities
+  - name: Merchandise
+  - name: Transactions
+  - name: Donations
+  - name: Legacy Donasi Sheet
+  - name: Faculties
+  - name: Dana Bantuan
+  - name: Tally Submissions
+  - name: Tally Webhooks
+  - name: Kemitraan
+  - name: Kegiatan Kemitraan
+  - name: Files
+  - name: Payments
+  - name: Members
+  - name: Users
+  - name: Admins
+  - name: Help Submissions
+  - name: Competition
+  - name: Bankes Mock
+  - name: Broadcast
+
+security:
+  - bearerAuth: []
+
+paths:
+  /:
+    get:
+      tags: [Health]
+      summary: Get API version
+      security: []
+      responses:
+        '200':
+          description: API version
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: string
+                    example: 3.9.0
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get authenticated user profile
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /auth/apps:
+    get:
+      tags: [Auth]
+      summary: Get accessible applications for authenticated user
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /auth/select:
+    post:
+      tags: [Auth]
+      summary: Select active app and role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelectAppRequest'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register user through SSO admin flow
+      security:
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterUserRequest'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /dashboard/stats:
+    get:
+      tags: [Dashboard]
+      summary: Get dashboard KPI statistics
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /dashboard/charts:
+    get:
+      tags: [Dashboard]
+      summary: Get dashboard chart data
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /dashboard/recent:
+    get:
+      tags: [Dashboard]
+      summary: Get recent submissions and admin activities
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /dashboard/payments:
+    get:
+      tags: [Dashboard]
+      summary: Get payment monitoring dashboard data
+      parameters:
+        - $ref: '#/components/parameters/StartDateQuery'
+        - $ref: '#/components/parameters/EndDateQuery'
+        - $ref: '#/components/parameters/DonationTypeQuery'
+        - $ref: '#/components/parameters/PaymentStatusQuery'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+
+  /activities:
+    get:
+      tags: [Activities]
+      summary: List activities
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LengthQuery'
+        - $ref: '#/components/parameters/SearchQuery'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ActivityStatus'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+    post:
+      tags: [Activities]
+      summary: Create activity
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityInput'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /activities/counts:
+    get:
+      tags: [Activities]
+      summary: Get activity counts by status
+      security: []
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /activities/id/{id}:
+    get:
+      tags: [Activities]
+      summary: Get activity by numeric id
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /activities/{slug}:
+    get:
+      tags: [Activities]
+      summary: Get activity by slug or route parameter
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /activities/{id}:
+    put:
+      tags: [Activities]
+      summary: Update activity
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityInput'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [Activities]
+      summary: Delete activity
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /merchandises:
+    get:
+      tags: [Merchandise]
+      summary: List merchandise
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LengthQuery'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+    post:
+      tags: [Merchandise]
+      summary: Create merchandise
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MerchandiseInput'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /merchandises/{id}:
+    get:
+      tags: [Merchandise]
+      summary: Get merchandise by id
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Merchandise]
+      summary: Update merchandise
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MerchandiseInput'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [Merchandise]
+      summary: Delete merchandise
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /transactions:
+    get:
+      tags: [Transactions]
+      summary: List merchandise transactions
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LengthQuery'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+    post:
+      tags: [Transactions]
+      summary: Create merchandise transaction
+      security: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TransactionInput'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+  /transactions/public/{token}:
+    get:
+      tags: [Transactions]
+      summary: Get transaction by public token
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /transactions/{id}:
+    get:
+      tags: [Transactions]
+      summary: Get transaction by id
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+    put:
+      tags: [Transactions]
+      summary: Update transaction
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TransactionInput'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+    delete:
+      tags: [Transactions]
+      summary: Delete transaction
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+
+  /donations:
+    get:
+      tags: [Donations]
+      summary: Public list donations
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LengthQuery'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+    post:
+      tags: [Donations]
+      summary: Create donation
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DonationInput'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+  /donations/admin:
+    get:
+      tags: [Donations]
+      summary: Admin list donations with payment filters
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LengthQuery'
+        - $ref: '#/components/parameters/SearchQuery'
+        - $ref: '#/components/parameters/PaymentMethodQuery'
+        - $ref: '#/components/parameters/PaymentStatusQuery'
+        - $ref: '#/components/parameters/DonationTypeQuery'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+  /donations/{id}:
+    get:
+      tags: [Donations]
+      summary: Get donation by id
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+    put:
+      tags: [Donations]
+      summary: Update donation
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DonationInput'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+    delete:
+      tags: [Donations]
+      summary: Delete donation
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+
+  /payments/snap-token:
+    post:
+      tags: [Payments]
+      summary: Create Midtrans Snap token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSnapTokenRequest'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /payments/notification:
+    post:
+      tags: [Payments]
+      summary: Receive Midtrans payment notification webhook
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /payments/verify:
+    post:
+      tags: [Payments]
+      summary: Verify payment status
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentOrderRequest'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /payments/cancel:
+    post:
+      tags: [Payments]
+      summary: Cancel payment
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentOrderRequest'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+
+  /faculties:
+    get:
+      tags: [Faculties]
+      summary: List faculties
+      security: []
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+    post:
+      tags: [Faculties]
+      summary: Create faculty
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FacultyInput'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /faculties/{id}:
+    put:
+      tags: [Faculties]
+      summary: Update faculty
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FacultyInput'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [Faculties]
+      summary: Delete faculty
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /tally-submissions/form/{formSlug}:
+    get:
+      tags: [Tally Submissions]
+      summary: List Tally submissions by form slug
+      parameters:
+        - $ref: '#/components/parameters/FormSlugPath'
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LengthQuery'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+  /tally-submissions/form/{formSlug}/{tallySubmissionId}:
+    get:
+      tags: [Tally Submissions]
+      summary: Get Tally submission detail
+      parameters:
+        - $ref: '#/components/parameters/FormSlugPath'
+        - name: tallySubmissionId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /tally-submissions/form/{formSlug}/{tallySubmissionId}/whatsapp:
+    post:
+      tags: [Tally Submissions]
+      summary: Send WhatsApp notification for Tally submission
+      parameters:
+        - $ref: '#/components/parameters/FormSlugPath'
+        - name: tallySubmissionId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /tally-submissions/pengajuan-bantuan/{tallySubmissionId}/status:
+    patch:
+      tags: [Tally Submissions]
+      summary: Update pengajuan bantuan status
+      parameters:
+        - name: tallySubmissionId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePengajuanBantuanStatusRequest'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+
+  /webhooks/tally/pendaftaran-anggota:
+    post:
+      tags: [Tally Webhooks]
+      summary: Receive Tally webhook for pendaftaran anggota
+      security: []
+      requestBody:
+        $ref: '#/components/requestBodies/TallyWebhook'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /webhooks/tally/pengajuan-bantuan:
+    post:
+      tags: [Tally Webhooks]
+      summary: Receive Tally webhook for pengajuan bantuan
+      security: []
+      requestBody:
+        $ref: '#/components/requestBodies/TallyWebhook'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /webhooks/tally/orang-tua-asuh:
+    post:
+      tags: [Tally Webhooks]
+      summary: Receive Tally webhook for orang tua asuh
+      security: []
+      requestBody:
+        $ref: '#/components/requestBodies/TallyWebhook'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+
+  /dana-bantuan:
+    get:
+      tags: [Dana Bantuan]
+      summary: List dana bantuan
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LengthQuery'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+    post:
+      tags: [Dana Bantuan]
+      summary: Create dana bantuan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DanaBantuanInput'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+  /dana-bantuan/{id}:
+    get:
+      tags: [Dana Bantuan]
+      summary: Get dana bantuan by id
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+    put:
+      tags: [Dana Bantuan]
+      summary: Update dana bantuan
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DanaBantuanInput'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+    delete:
+      tags: [Dana Bantuan]
+      summary: Delete dana bantuan
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+
+  /kemitraan:
+    get:
+      tags: [Kemitraan]
+      summary: List kemitraan
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LengthQuery'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+    post:
+      tags: [Kemitraan]
+      summary: Create kemitraan
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/KemitraanInput'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /kemitraan/{id}:
+    get:
+      tags: [Kemitraan]
+      summary: Get kemitraan by id
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Kemitraan]
+      summary: Update kemitraan
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/KemitraanInput'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [Kemitraan]
+      summary: Delete kemitraan
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /kegiatan-kemitraan:
+    get:
+      tags: [Kegiatan Kemitraan]
+      summary: List kegiatan kemitraan
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LengthQuery'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+    post:
+      tags: [Kegiatan Kemitraan]
+      summary: Create kegiatan kemitraan
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/KegiatanKemitraanInput'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+  /kegiatan-kemitraan/{id}:
+    put:
+      tags: [Kegiatan Kemitraan]
+      summary: Update kegiatan kemitraan
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/KegiatanKemitraanInput'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+    delete:
+      tags: [Kegiatan Kemitraan]
+      summary: Delete kegiatan kemitraan
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+
+  /file/upload:
+    post:
+      tags: [Files]
+      summary: Upload generic file
+      security: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /file/download:
+    get:
+      tags: [Files]
+      summary: Download uploaded file
+      security: []
+      parameters:
+        - name: filename
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: File stream
+  /file/preview:
+    get:
+      tags: [Files]
+      summary: Preview uploaded file
+      security: []
+      parameters:
+        - name: filename
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: File stream
+  /file/images/upload:
+    post:
+      tags: [Files]
+      summary: Upload image through file router
+      security: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /images/upload:
+    post:
+      tags: [Files]
+      summary: Upload image
+      security: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+
+  /users:
+    get:
+      tags: [Users]
+      summary: List users
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LengthQuery'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+    post:
+      tags: [Users]
+      summary: Create user
+      security: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserInput'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: Get user by id
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Users]
+      summary: Update user
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserInput'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [Users]
+      summary: Delete user
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /members:
+    get:
+      tags: [Members]
+      summary: List members
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LengthQuery'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+    post:
+      tags: [Members]
+      summary: Create member
+      security: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MemberInput'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+  /members/{id}:
+    get:
+      tags: [Members]
+      summary: Get member by id
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Members]
+      summary: Update member
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MemberInput'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [Members]
+      summary: Delete member
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /admins:
+    post:
+      tags: [Admins]
+      summary: Create admin
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /help-submissions:
+    get:
+      tags: [Help Submissions]
+      summary: List help submissions
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LengthQuery'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+    post:
+      tags: [Help Submissions]
+      summary: Create help submission
+      security: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+  /help-submissions/{id}:
+    get:
+      tags: [Help Submissions]
+      summary: Get help submission by id
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Help Submissions]
+      summary: Update help submission
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [Help Submissions]
+      summary: Delete help submission
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /bankes-mock/mahasiswa:
+    get:
+      tags: [Bankes Mock]
+      summary: Get mock mahasiswa Bankes data
+      security: []
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /bankes-mock/ota:
+    get:
+      tags: [Bankes Mock]
+      summary: Get mock OTA Bankes data
+      security: []
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+
+  /broadcast/settings:
+    get:
+      tags: [Broadcast]
+      summary: List broadcast settings
+      security:
+        - bearerAuth: []
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Broadcast]
+      summary: Create broadcast setting
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /broadcast/settings/{id}:
+    put:
+      tags: [Broadcast]
+      summary: Update broadcast setting
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [Broadcast]
+      summary: Delete broadcast setting
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /broadcast/run/{id}:
+    post:
+      tags: [Broadcast]
+      summary: Trigger broadcast execution
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /broadcast/logs:
+    get:
+      tags: [Broadcast]
+      summary: Get broadcast logs
+      security:
+        - bearerAuth: []
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /broadcast/members:
+    get:
+      tags: [Broadcast]
+      summary: Get broadcast recipients
+      security:
+        - bearerAuth: []
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /competition/findCompetition:
+    get:
+      tags: [Competition]
+      summary: List competitions
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LengthQuery'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+  /competition/findCompetitionRegistration:
+    get:
+      tags: [Competition]
+      summary: List competition registrations
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LengthQuery'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+  /competition/findScheduleCompetition:
+    get:
+      tags: [Competition]
+      summary: List competition schedules
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LengthQuery'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+  /competition/findSubmission:
+    get:
+      tags: [Competition]
+      summary: List competition submissions
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LengthQuery'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+  /competition/registerCompetition:
+    post:
+      tags: [Competition]
+      summary: Register competition
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                banner:
+                  type: string
+                  format: binary
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+  /competition/register/peserta:
+    post:
+      tags: [Competition]
+      summary: Register competition participant
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                supportingDocuments:
+                  type: string
+                  format: binary
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+  /competition/schedule:
+    post:
+      tags: [Competition]
+      summary: Create competition schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+  /competition/submission:
+    post:
+      tags: [Competition]
+      summary: Create competition submission
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+  /competition/updateScheduleCompetition/{id}:
+    put:
+      tags: [Competition]
+      summary: Update competition schedule
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /competition/deleteScheduleCompetition/{id}:
+    delete:
+      tags: [Competition]
+      summary: Delete competition schedule
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+
+  /pendataan-anggota:
+    get:
+      tags: [Legacy Donasi Sheet]
+      summary: List legacy pendataan anggota sheet records
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LengthQuery'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+  /pendataan-anggota/{id}:
+    get:
+      tags: [Legacy Donasi Sheet]
+      summary: Get legacy pendataan anggota record by id
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /pengajuan-bantuan:
+    get:
+      tags: [Legacy Donasi Sheet]
+      summary: List legacy pengajuan bantuan sheet records
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LengthQuery'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+  /pengajuan-bantuan/{id}:
+    get:
+      tags: [Legacy Donasi Sheet]
+      summary: Get legacy pengajuan bantuan record by id
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /orangtua-asuh:
+    get:
+      tags: [Legacy Donasi Sheet]
+      summary: List legacy orang tua asuh sheet records
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LengthQuery'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+  /orangtua-asuh/{id}:
+    get:
+      tags: [Legacy Donasi Sheet]
+      summary: Get legacy orang tua asuh record by id
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /donasi:
+    get:
+      tags: [Legacy Donasi Sheet]
+      summary: List legacy donasi sheet records
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LengthQuery'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+  /donasi/{id}:
+    get:
+      tags: [Legacy Donasi Sheet]
+      summary: Get legacy donasi record by id
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+    PageQuery:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    LengthQuery:
+      name: length
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 10
+    SearchQuery:
+      name: search
+      in: query
+      schema: { type: string }
+    StartDateQuery:
+      name: startDate
+      in: query
+      schema:
+        type: string
+        format: date
+    EndDateQuery:
+      name: endDate
+      in: query
+      schema:
+        type: string
+        format: date
+    PaymentMethodQuery:
+      name: paymentMethod
+      in: query
+      schema:
+        $ref: '#/components/schemas/PaymentMethod'
+    PaymentStatusQuery:
+      name: paymentStatus
+      in: query
+      schema:
+        $ref: '#/components/schemas/PaymentStatus'
+    DonationTypeQuery:
+      name: donationType
+      in: query
+      schema:
+        $ref: '#/components/schemas/DonationType'
+    FormSlugPath:
+      name: formSlug
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/TallyFormSlug'
+
+  requestBodies:
+    TallyWebhook:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+
+  responses:
+    Success:
+      description: Successful response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+    Created:
+      description: Created response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+    Paginated:
+      description: Paginated response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PaginatedResponse'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: Success
+        data:
+          nullable: true
+    PaginatedResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+          example: 200
+        data:
+          type: array
+          items: {}
+        total:
+          type: integer
+          example: 100
+        page:
+          type: integer
+          example: 1
+        length:
+          type: integer
+          example: 10
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: Error message
+
+    SelectAppRequest:
+      type: object
+      required: [appId, role]
+      properties:
+        appId:
+          type: string
+          example: web
+        role:
+          type: string
+          example: admin
+    RegisterUserRequest:
+      type: object
+      required: [email, name]
+      additionalProperties: true
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        roles:
+          type: array
+          items: { type: string }
+
+    ActivityStatus:
+      type: string
+      enum: [draft, published]
+    ActivityMediaInput:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [image, youtube]
+        value:
+          type: string
+        caption:
+          type: string
+        order:
+          type: integer
+    ActivityInput:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+        date:
+          type: string
+          format: date-time
+        description:
+          type: string
+        image:
+          type: string
+        url:
+          type: string
+        status:
+          $ref: '#/components/schemas/ActivityStatus'
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityMediaInput'
+
+    MerchandiseInput:
+      type: object
+      required: [name, price, stock]
+      properties:
+        image:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          format: decimal
+        stock:
+          type: integer
+        link:
+          type: string
+
+    TransactionStatus:
+      type: string
+      enum: [waiting, on process, on delivery, arrived, done, canceled, denied]
+    TransactionInput:
+      type: object
+      required: [username, email, noTelp, address, merchandiseId, qty]
+      properties:
+        code:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        noTelp:
+          type: string
+        address:
+          type: string
+        merchandiseId:
+          type: integer
+        qty:
+          type: integer
+        status:
+          $ref: '#/components/schemas/TransactionStatus'
+        payment:
+          type: string
+          format: binary
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
+        paymentStatus:
+          $ref: '#/components/schemas/PaymentStatus'
+
+    DonationType:
+      type: string
+      enum:
+        - iuran_sukarela
+        - kontribusi_anggota
+        - kontribusi_donatur
+        - pembelian_merchandise
+        - kontribusi_sukarela
+    PaymentMethod:
+      type: string
+      enum: [manual, midtrans]
+    PaymentStatus:
+      type: string
+      enum: [pending, settlement, expired, failed, refunded]
+    DonationInput:
+      type: object
+      required: [name, email, noWhatsapp, notification]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        noWhatsapp:
+          type: string
+        proof:
+          type: string
+          format: binary
+        notification:
+          type: array
+          items:
+            type: string
+            enum: [whatsapp, email]
+        amount:
+          type: number
+        options:
+          type: object
+          additionalProperties: true
+        date:
+          type: string
+          format: date
+        bank:
+          type: string
+        donationType:
+          $ref: '#/components/schemas/DonationType'
+        facultyId:
+          type: integer
+        hideName:
+          type: boolean
+        hambaAllah:
+          type: boolean
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
+        paymentStatus:
+          $ref: '#/components/schemas/PaymentStatus'
+
+    FacultyInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          example: Fakultas Teknologi Industri
+        kodeUnik:
+          type: string
+          maxLength: 3
+          example: '001'
+        isActive:
+          type: boolean
+          default: true
+
+    TallyFormSlug:
+      type: string
+      enum: [pendaftaran_anggota, pengajuan_bantuan, orang_tua_asuh]
+    PengajuanBantuanStatus:
+      type: string
+      enum:
+        - TIDAK_DIKETAHUI
+        - VERIFIKASI_BERKAS
+        - DIPANGGIL_WAWANCARA
+        - KEPUTUSAN_DITERIMA
+        - KEPUTUSAN_DITOLAK
+    UpdatePengajuanBantuanStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/PengajuanBantuanStatus'
+        catatan:
+          type: string
+          nullable: true
+
+    DanaBantuanInput:
+      type: object
+      required: [id_penerima, jenis_bantuan, bulan, tahun, jumlah_donasi]
+      properties:
+        id_penerima:
+          type: integer
+        jenis_bantuan:
+          type: string
+          enum:
+            - Biaya UKT
+            - Biaya Hidup
+            - Biaya Tugas Akhir
+            - Biaya Kesehatan (Bagi yang membutuhkan dan bersifat darurat)
+            - Bantuan Orang Tua Asuh
+            - Bantuan Lainnya
+        bulan:
+          type: string
+          enum: [Januari, Febuari, Maret, April, Mei, Juni, Juli, Agustus, September, Oktober, November, Desember]
+        tahun:
+          type: integer
+        jumlah_donasi:
+          type: number
+          format: decimal
+
+    KemitraanInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        picName:
+          type: string
+        picPhone:
+          type: string
+        image:
+          type: string
+          format: binary
+        mou:
+          type: string
+          format: binary
+    KegiatanKemitraanStatus:
+      type: string
+      enum: [planned, ongoing, completed, cancelled]
+    KegiatanKemitraanInput:
+      type: object
+      required: [kemitraanId, name]
+      properties:
+        kemitraanId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        location:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/KegiatanKemitraanStatus'
+        image:
+          type: string
+          format: binary
+
+    CreateSnapTokenRequest:
+      type: object
+      required: [type, id]
+      properties:
+        type:
+          type: string
+          enum: [donation, transaction]
+        id:
+          type: integer
+    PaymentOrderRequest:
+      type: object
+      required: [orderId]
+      properties:
+        orderId:
+          type: string
+
+    UserInput:
+      type: object
+      additionalProperties: true
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        photo:
+          type: string
+          format: binary
+    MemberInput:
+      type: object
+      required: [code, parentName, childNim, noWhatsapp]
+      properties:
+        code:
+          type: string
+        parentName:
+          type: string
+        childNim:
+          type: string
+        noWhatsapp:
+          type: string
+        picture:
+          type: string
+          format: binary
+        file:
+          type: string
+          format: binary
+        options:
+          type: object
+          additionalProperties: true

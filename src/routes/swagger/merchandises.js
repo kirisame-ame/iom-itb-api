@@ -1,156 +1,166 @@
 /**
  * @swagger
  *
- * /merchandise/list:
+ * /merchandises/categories:
  *   get:
- *     security:
- *       - bearerAuth: []
- *     summary: List all merchandise
+ *     summary: Get merchandise categories
  *     tags: [Merchandise]
- *     parameters:
- *      - in: query
- *        name: page
- *        required: false
- *        description: The page of list
- *        example: 1
- *      - in: query
- *        name: length
- *        required: false
- *        description: The length of list
- *        example: 10
- *      - in: query
- *        name: search
- *        required: false
- *        description: search with keyword merchandise id, name, description, price, stock
  *     responses:
  *       200:
- *         description: A list of merchandise
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *       500:
- *         description: Internal Server Error
- *
- * /merchandise/detail:
- *   get:
- *     security:
- *       - bearerAuth: []
- *     summary: Get merchandise detail
- *     tags: [Merchandise]
- *     parameters:
- *      - in: path
- *        name: id
- *        required: true
- *        description: The ID of the merchandise
- *        example: 1
- *     responses:
- *       200:
- *         description: Merchandise detail
+ *         description: List of categories
  *         content:
  *           application/json:
  *             schema:
  *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: string
  *       500:
  *         description: Internal Server Error
  *
- * /merchandise/create:
+ * /merchandises:
+ *   get:
+ *     summary: Get all merchandise
+ *     tags: [Merchandise]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *       - in: query
+ *         name: length
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           example: 10
+ *       - in: query
+ *         name: search
+ *         required: false
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: A list of merchandise
+ *       500:
+ *         description: Internal Server Error
+ *
  *   post:
- *     security:
- *       - bearerAuth: []
  *     summary: Create new merchandise
  *     tags: [Merchandise]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       content:
- *         multipart/form-data:
+ *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - name
+ *               - price
  *             properties:
  *               name:
- *                 description: Merchandise name
  *                 type: string
- *                 example: "T-Shirt"
+ *                 example: T-Shirt
  *               description:
- *                 description: Merchandise description
  *                 type: string
- *                 example: "This is a cool T-Shirt"
+ *                 example: Cool t-shirt
  *               price:
- *                 description: Merchandise price
  *                 type: number
  *                 example: 100000
  *               stock:
- *                 description: Merchandise stock
  *                 type: integer
  *                 example: 100
+ *               link:
+ *                 type: string
+ *                 example: https://example.com
+ *               kategori:
+ *                 type: string
+ *                 example: Busana
  *               image:
- *                 description: Merchandise image file
  *                 type: string
  *                 format: binary
  *     responses:
- *       200:
- *         description: Merchandise successfully created
+ *       201:
+ *         description: Merchandise created
  *       500:
  *         description: Internal Server Error
  *
- * /merchandise/update/{id}:
+ * /merchandises/{id}:
+ *   get:
+ *     summary: Get merchandise by ID
+ *     tags: [Merchandise]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Merchandise detail
+ *       404:
+ *         description: Not found
+ *       500:
+ *         description: Internal Server Error
+ *
  *   put:
- *     security:
- *       - bearerAuth: []
  *     summary: Update merchandise
  *     tags: [Merchandise]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
- *      - in: path
- *        name: id
- *        required: true
- *        description: The ID of the merchandise
- *        example: 1
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
  *     requestBody:
  *       content:
- *         multipart/form-data:
+ *         application/json:
  *           schema:
  *             type: object
  *             properties:
  *               name:
- *                 description: Merchandise name
  *                 type: string
- *                 example: "T-Shirt"
  *               description:
- *                 description: Merchandise description
  *                 type: string
- *                 example: "This is a cool T-Shirt"
  *               price:
- *                 description: Merchandise price
  *                 type: number
- *                 example: 100000
  *               stock:
- *                 description: Merchandise stock
  *                 type: integer
- *                 example: 100
+ *               link:
+ *                 type: string
+ *               kategori:
+ *                 type: string
  *               image:
- *                 description: Merchandise image file
  *                 type: string
  *                 format: binary
  *     responses:
  *       200:
- *         description: Merchandise successfully updated
+ *         description: Merchandise updated
  *       500:
  *         description: Internal Server Error
  *
- * /merchandise/delete/{id}:
  *   delete:
- *     security:
- *       - bearerAuth: []
  *     summary: Delete merchandise
  *     tags: [Merchandise]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
- *      - in: path
- *        name: id
- *        required: true
- *        description: The ID of the merchandise
- *        example: 1
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
  *     responses:
  *       200:
- *         description: Merchandise successfully deleted
+ *         description: Merchandise deleted
+ *       404:
+ *         description: Not found
  *       500:
  *         description: Internal Server Error
  */

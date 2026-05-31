@@ -17,6 +17,18 @@ const TransactionRouter = require('./transactions');
 const fileRouter = require('./file');
 const CompetitionRouter = require('./competition');
 const DanaBantuan = require('./danaBantuan');
+const KemitraanRouter = require('./kemitraan');
+const kegiatanKemitraanRouter = require('./kegiatanKemitraan');
+const PaymentsRouter = require('./payments');
+const FacultiesRouter = require('./faculties');
+const TallyWebhookRouter = require('./tallyWebhooks');
+const TallySubmissionsRouter = require('./tallySubmissions');
+const DashboardRouter = require('./dashboard');
+const ImageRouter = require('./image');
+const BankesMockRouter = require('./bankesMock');
+const NotificationsRouter = require('./notifications');
+const EmailTemplateRouter = require('./emailTemplate');
+const BroadcastRouter = require('./broadcast');
 
 router.get('/', (req, res) => {
   res.json({
@@ -40,5 +52,17 @@ router.use('/transactions', TransactionRouter);
 router.use('/file', fileRouter);
 router.use('/competition', CompetitionRouter);
 router.use('/dana-bantuan', DanaBantuan);
+router.use('/kemitraan', KemitraanRouter);
+router.use('/kegiatan-kemitraan', kegiatanKemitraanRouter);
+router.use('/payments', PaymentsRouter);
+router.use('/faculties', FacultiesRouter);
+router.use('/webhooks/tally', TallyWebhookRouter);
+router.use('/tally-submissions', TallySubmissionsRouter);
+router.use('/dashboard', DashboardRouter);
+router.use('/images', ImageRouter);
+router.use('/bankes-mock', BankesMockRouter);
+router.use('/notifications', NotificationsRouter);
+router.use('/email-templates', EmailTemplateRouter);
+router.use('/broadcast', BroadcastRouter);
 
 module.exports = router;

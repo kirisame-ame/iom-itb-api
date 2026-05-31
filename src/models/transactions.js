@@ -27,6 +27,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true
     },
+    publicToken: {
+      type: DataTypes.STRING(80),
+      allowNull: false,
+      unique: true
+    },
     username: {
       type: DataTypes.STRING,
       allowNull: false
@@ -62,7 +67,64 @@ module.exports = (sequelize, DataTypes) => {
     },
     payment: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: true
+    },
+    paymentMethod: {
+      type: DataTypes.ENUM('manual', 'midtrans'),
+      allowNull: false,
+      defaultValue: 'manual'
+    },
+    paymentStatus: {
+      type: DataTypes.ENUM('pending', 'settlement', 'expired', 'failed', 'refunded'),
+      allowNull: false,
+      defaultValue: 'pending'
+    },
+    midtransOrderId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true
+    },
+    midtransTransactionId: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    grossAmount: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: true
+    },
+    currency: {
+      type: DataTypes.STRING(3),
+      allowNull: false,
+      defaultValue: 'IDR'
+    },
+    paidAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    paymentType: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    vaNumber: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    fraudStatus: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    expiredAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    rawNotification: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    stockDeducted: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
     }
   }, {
     sequelize,

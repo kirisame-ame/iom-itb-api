@@ -2,18 +2,32 @@ const { Router } = require('express');
 const {
   GetActivityBySlug,
   GetAllActivities,
+  GetAllActivitiesAdmin,
   CreateNewActivity,
   UpdateActivityById,
   DeleteActivityById,
+  GetActivityById,
+  GetActivityCounts,
+  GetAllTags
 } = require('../controllers/activities');
- const JWTValidation = require('../middlewares/auth');
+const JWTValidation = require('../middlewares/auth');
+const requireRoles = require('../middlewares/requireRoles');
+const { CONTENT_ROLES } = require('../utils/roles');
 
 const router = Router();
 
-router.get('', [], GetAllActivities);
+// Public
+router.get('/', [], GetAllActivities);
+router.get('/tags', [], GetAllTags);
+
+// Admin
+router.get('/admin/all', JWTValidation, requireRoles(CONTENT_ROLES), GetAllActivitiesAdmin);
+router.get('/admin/id/:id', JWTValidation, requireRoles(CONTENT_ROLES), GetActivityById);
+router.get('/admin/counts', JWTValidation, requireRoles(CONTENT_ROLES), GetActivityCounts);
+router.post('/', JWTValidation, requireRoles(CONTENT_ROLES), CreateNewActivity);
+router.put('/:id', JWTValidation, requireRoles(CONTENT_ROLES), UpdateActivityById);
+router.delete('/:id', JWTValidation, requireRoles(CONTENT_ROLES), DeleteActivityById);
+
 router.get('/:slug', [], GetActivityBySlug);
-router.post('', JWTValidation, CreateNewActivity);
-router.put('/:id', JWTValidation, UpdateActivityById);
-router.delete('/:id', JWTValidation, DeleteActivityById);
 
 module.exports = router;

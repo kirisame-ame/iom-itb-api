@@ -7,15 +7,18 @@ const {
   DeleteMemberById,
 } = require('../controllers/members');
 const upload = require('../middlewares/multer');
+const JWTValidation = require('../middlewares/auth');
+const requireRoles = require('../middlewares/requireRoles');
+const { SECRETARIAT_ROLES } = require('../utils/roles');
 
 const router = Router();
+const canManageMembers = [JWTValidation, requireRoles(SECRETARIAT_ROLES)];
 
-router.get('', [], GetAllMembers);
-router.get('/:id', [], GetMemberById);
+router.get('', canManageMembers, GetAllMembers);
+router.get('/:id', canManageMembers, GetMemberById);
 
-// Allow upload for both 'picture' and 'file' fields, with 'file' being the PDF
-router.post('', upload.fields([{ name: 'picture', maxCount: 1 }, { name: 'file', maxCount: 1 }]), CreateNewMember);
-router.put('/:id', upload.fields([{ name: 'picture', maxCount: 1 }, { name: 'file', maxCount: 1 }]), UpdateMemberById);
-router.delete('/:id', [], DeleteMemberById);
+router.post('', canManageMembers, upload.fields([{ name: 'picture', maxCount: 1 }, { name: 'file', maxCount: 1 }]), CreateNewMember);
+router.put('/:id', canManageMembers, upload.fields([{ name: 'picture', maxCount: 1 }, { name: 'file', maxCount: 1 }]), UpdateMemberById);
+router.delete('/:id', canManageMembers, DeleteMemberById);
 
 module.exports = router;

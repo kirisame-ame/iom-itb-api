@@ -44,30 +44,46 @@ const app = express();
 
 const swaggerOption = {
   definition: {
-    openapi: '3.1.0',
+    openapi: '3.0.0',
     info: {
-      title: 'API IOM',
+      title: 'API IOM (Latest)',
       version: '1.0.0',
-      description: 'Description of API IOM',
+      description: 'API Documentation for IOM ITB',
     },
-    server: [
+    servers: [
       {
-        uri: process.env.BASE_URL,
+        url: process.env.BASE_URL,
+        description: 'Production Server',
       },
     ],
   },
-  apis: ['./src/routes/swagger/*.js'],
+  apis: [
+    path.join(__dirname, 'routes/swagger/*.js'),
+    path.join(__dirname, '../openapi.yml'),
+  ],
 };
 
 const swaggerSpec = swaggerJsDoc(swaggerOption);
+
+// Explicit route for openapi.json BEFORE swagger middleware
+app.get('/api/openapi.json', (req, res) => {
+  res.json(swaggerSpec);
+});
+
 app.use(
-  '/api',
-  swaggerUi.serveFiles(swaggerSpec),
-  swaggerUi.setup(swaggerSpec),
+  '/api/docs',
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    explorer: true,
+    customSiteTitle: 'IOM ITB API Documentation',
+  }),
 );
 
 app.use(morgan('dev'));
 // app.use(helmet());
+
+// Tally webhook needs raw body for signature verification.
+app.use('/webhooks/tally', express.raw({ type: 'application/json' }));
 
 // Manual CORS implementation
 app.use((req, res, next) => {
@@ -78,7 +94,7 @@ app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', origin);
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Selected-Role');
   }
   
   if (req.method === 'OPTIONS') {
@@ -91,7 +107,13 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
-app.use('/', express.static(path.join(__dirname, '')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Custom static middleware - exclude /api routes
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  express.static(path.join(__dirname, ''))(req, res, next);
+});
 
 app.use(router);
 
@@ -102,9 +124,18 @@ app.get('/', (req, res) => {
   });
 });
 
-// forgotPasswordJob.start();
+app.use((err, req, res, next) => {
+  const status = err.status || err.statusCode || 500;
 
-app.use(router);
+  res.status(status).json({
+    status,
+    message: err.message || 'Internal Server Error',
+  });
+});
+
+// forgotPasswordJob.start();
+const { broadcastJob } = require('./utils/cron');
+broadcastJob.start();
 
 // const endpoints = expressListEndpoints(app);
 // console.log(endpoints);
