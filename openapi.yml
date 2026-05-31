@@ -10,11 +10,9 @@ info:
     - `/auth/register` requires `x-api-key`.
     - Tally webhook endpoints are intended to be called by Tally webhook integration.
     - Midtrans notification endpoint is intended to be called by Midtrans and may be IP allowlisted.
-servers:
-  - url: http://localhost:3000
-    description: Local development
-  - url: https://api.iom-itb.id
-    description: Production
+
+# Server dikosongkan untuk mematikan fungsi testing (Try it out) agar dokumentasi hanya bersifat bacaan
+servers: []
 
 tags:
   - name: Health
@@ -247,6 +245,65 @@ paths:
       responses:
         '201': { $ref: '#/components/responses/Created' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /merchandises/categories:
+    post:
+      tags: [Merchandise]
+      summary: Create merchandise category
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  
+  /merchandises/categories/{categoryId}:
+    put:
+      tags: [Merchandise]
+      summary: Update merchandise category
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [Merchandise]
+      summary: Delete merchandise category
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   /merchandises/{id}:
     get:
       tags: [Merchandise]
