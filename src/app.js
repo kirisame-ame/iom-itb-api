@@ -124,6 +124,15 @@ app.get('/', (req, res) => {
   });
 });
 
+app.use((err, req, res, next) => {
+  const status = err.status || err.statusCode || 500;
+
+  res.status(status).json({
+    status,
+    message: err.message || 'Internal Server Error',
+  });
+});
+
 // forgotPasswordJob.start();
 const { broadcastJob } = require('./utils/cron');
 broadcastJob.start();
