@@ -36,11 +36,12 @@ const GetActivityBySlug = async (req, res) => {
 
 const GetAllActivities = async (req, res) => {
   try {
-    const { search, page = 1, limit = 10, sort } = req.query;
+    const { search, contributor, page = 1, limit = 10, sort } = req.query;
     const pageNumber = parseInt(page);
     const pageLimit = Math.min(parseInt(limit), 50);
     const activities = await GetActivities({
       search,
+      contributor,
       page: pageNumber,
       limit: pageLimit,
       status: 'published',
@@ -64,11 +65,12 @@ const GetAllActivities = async (req, res) => {
 
 const GetAllActivitiesAdmin = async (req, res) => {
   try {
-    const { search, page = 1, limit = 10, status, sort } = req.query;
+    const { search, contributor, page = 1, limit = 10, status, sort } = req.query;
     const pageNumber = parseInt(page);
     const pageLimit = Math.min(parseInt(limit), 100);
     const activities = await GetActivities({
       search,
+      contributor,
       page: pageNumber,
       limit: pageLimit,
       status,
