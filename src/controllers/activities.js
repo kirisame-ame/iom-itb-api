@@ -145,21 +145,6 @@ const UpdateActivityById = async (req, res) => {
   try {
     const { id } = req.params;
     const { body } = req;
-
-    if (body.status === 'published') {
-      if (!body.image) {
-        return res.status(StatusCodes.BAD_REQUEST).json(new BaseResponse({
-          status: StatusCodes.BAD_REQUEST,
-          message: 'Thumbnail wajib diisi sebelum publish.',
-        }));
-      }
-      if (!body.contributors || body.contributors.length === 0) {
-        return res.status(StatusCodes.BAD_REQUEST).json(new BaseResponse({
-          status: StatusCodes.BAD_REQUEST,
-          message: 'Minimal 1 kontributor wajib diisi sebelum publish.',
-        }));
-      }
-    }
     
     const updatedActivity = await UpdateActivity(id, body);
 
